@@ -70,6 +70,14 @@
       .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
       @media (prefers-color-scheme: light) { :root { --bg: #f1f5f9; --text: #0b1220; --card: rgba(0,0,0,0.04); --muted: #334155; } body { background: radial-gradient(1200px 800px at 10% 10%, #e2e8f0 0%, #e5e7eb 35%, #f1f5f9 100%); } }
       @media (prefers-reduced-motion: reduce) { .big-btn { transition: none; } }
+      @media (max-width: 480px) {
+        .tabs { grid-template-columns: repeat(4, 1fr); overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; }
+        .tabs::-webkit-scrollbar { display: none; }
+        .stats { grid-template-columns: repeat(3, 1fr); }
+        .big-btn { max-height: 50vh; font-size: 10vw; }
+        .actions .btn { padding: 12px 14px; font-size: 16px; }
+        .list .item { padding: 12px; }
+      }
     </style>
   </head>
   <body>
@@ -238,7 +246,7 @@
       </section>
     </main>
 
-    <footer class="footer"><span id="user-label">Гость</span><span class="sep">·</span><span id="save-label">Сохранение: локально</span></footer>
+    <footer class="footer"><span id="user-label">Гость</span><span class="sep">·</span><span id="save-label">Сохранение: —</span></footer>
 
     <div id="auth-overlay" class="overlay hidden" role="dialog" aria-modal="true">
       <div class="modal">
@@ -297,7 +305,7 @@
       // --- Anti-tamper and integrity check ---
       let __tamperChecked = false;
       let __tamperDetected = false;
-             const INTEGRITY_SCRIPT_HASH = 1018650898; // auto-generated integrity hash
+             const INTEGRITY_SCRIPT_HASH = 148744944; // auto-generated integrity hash
       function djb2(str){ let h = 5381 >>> 0; for (let i = 0; i < str.length; i++) { h = (((h << 5) + h) ^ str.charCodeAt(i)) >>> 0; } return h >>> 0; }
       function getModuleScriptText(){ try { const s = document.getElementById('app-module'); if (!s) return ''; return s.textContent || ''; } catch { return ''; } }
       function computeCurrentScriptHash(){ const txt = getModuleScriptText().replace(/INTEGRITY_SCRIPT_HASH\s*=\s*\d+/, '').replace(/\n|\r/g,''); return djb2(txt); }
@@ -375,6 +383,8 @@
         try {
           const btn = document.querySelector('.segmented .seg.active') || document.querySelector('.segmented .seg');
           if (btn) switchLeaderboard(btn);
+          // Mobile tweaks: larger tap target for leaderboard tabs
+          document.querySelectorAll('.segmented button').forEach(b=>{ b.style.minWidth='64px'; b.style.padding='10px 12px'; b.style.fontSize='14px'; });
         } catch {}
       }
 
@@ -395,7 +405,7 @@
       window.App.dom = dom;
       window.App.firebase = { app, auth, db };
 
-      const STORAGE_KEY = 'global-clicker:save-v3';
+
       const TEXT = { ru: { game: 'Игра', shop: 'Магазин', top: 'Топ', quests: 'Квесты', achievements: 'Достижения', settings: 'Настройки', coins: 'Монеты', perClick: 'За клик', cps: 'в сек', prestige: 'Престиж', clicks: 'Клики', boost: 'Буст x2', prestigeBtn: 'Престиж', save: 'Сохранить', daily: 'Забрать ежедневную награду', }, en: { game: 'Game', shop: 'Shop', top: 'Top', quests: 'Quests', achievements: 'Achievements', settings: 'Settings', coins: 'Coins', perClick: 'Per click', cps: 'per sec', prestige: 'Prestige', clicks: 'Clicks', boost: 'Boost x2', prestigeBtn: 'Prestige', save: 'Save', daily: 'Claim daily reward', } };
       const EFFECTS = { critFlashMs: 180, shardFlashMs: 250, clickRipple: true };
 
@@ -433,7 +443,7 @@
         if (data.type === 'coins') { gameState.coins += (data.amount||0); gameState.coinsTotal += (data.amount||0); }
         else if (data.type === 'prestige') { gameState.prestige += (data.amount||1); }
         else if (data.type === 'boost') { activateBoost(Math.max(2, data.mult||2), (Math.max(5, data.duration||30))*1000, 0); }
-        gameState.redeemedCodes[code] = true; renderStats(); renderShop(); saveLocal(); await saveCloudForCurrentAccount(exportPayload());
+        gameState.redeemedCodes[code] = true; renderStats(); renderShop(); await saveCloudForCurrentAccount(exportPayload());
         await setDoc(usageRef, { count: (usageSnap.exists()? (usageSnap.data().count||0):0) + 1, updatedAt: serverTimestamp() }, { merge: true });
         await setDoc(promoRef, { used: increment(1) }, { merge: true });
         alert('Код активирован');
@@ -460,8 +470,8 @@
       function todayKey() { const d = new Date(); return d.toISOString().slice(0,10); }
       function sumValues(o){ return Object.values(o).reduce((a,b)=>a+(+b||0),0); }
 
-      function loadLocal() { try { const raw = localStorage.getItem(STORAGE_KEY); if (!raw) return; Object.assign(gameState, JSON.parse(raw)); } catch {} if (gameState.daily?.date !== todayKey()) { const yest = new Date(gameState.daily?.date || todayKey()); const diff = Math.round((Date.now() - yest.getTime())/86400000); const keepStreak = diff === 1; gameState.daily = { date: todayKey(), clicks:0, upgrades:0, earned:0, claimed:false, streak: keepStreak ? (gameState.daily.streak||0)+1 : 0 }; } }
-      function saveLocal() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ coins: gameState.coins, coinsTotal: gameState.coinsTotal, perClick: gameState.perClick, perSecond: gameState.perSecond, totalClicks: gameState.totalClicks, prestige: gameState.prestige, upgrades: gameState.upgrades, autos: gameState.autos, settings: gameState.settings, playerName: gameState.playerName, boost: gameState.boost, daily: gameState.daily, achievements: gameState.achievements, redeemedCodes: gameState.redeemedCodes, lastSeenMs: Date.now(), combo: gameState.combo, maxCombo: gameState.maxCombo, critHits: gameState.critHits, shards: gameState.shards, event: gameState.event })); } catch (e) { console.warn('Local storage disabled; using memory only.'); } }
+      function loadLocal() { /* local storage removed */ if (gameState.daily?.date !== todayKey()) { const yest = new Date(gameState.daily?.date || todayKey()); const diff = Math.round((Date.now() - yest.getTime())/86400000); const keepStreak = diff === 1; gameState.daily = { date: todayKey(), clicks:0, upgrades:0, earned:0, claimed:false, streak: keepStreak ? (gameState.daily.streak||0)+1 : 0 }; } }
+      function saveLocal() { /* removed */ }
 
       function format(num) { if (!Number.isFinite(num) || isNaN(num)) return '0'; if (num < 1000) return Math.floor(num).toString(); const suffix = ['k', 'M', 'B', 'T', 'Q']; let idx = -1; while (num >= 1000 && idx < suffix.length - 1) { num /= 1000; idx++; } return num.toFixed(2) + suffix[idx]; }
       function artifactMultiplier(){ return 1 + (gameState.shards||0) * 0.002; }
@@ -524,7 +534,7 @@
 
       async function migrateAccountId(newId){ const user = auth.currentUser; if (!user) throw new Error('Нет пользователя'); const oldId = await getAccountId(); if (oldId === newId) return oldId; const oldUserRef = doc(db,'users', oldId); const oldLbRef = doc(db,'leaderboard', oldId); const [oldUserSnap, oldLbSnap] = await Promise.all([getDoc(oldUserRef), getDoc(oldLbRef)]); await setDoc(doc(db,'users', newId), { ...(oldUserSnap.exists()? oldUserSnap.data(): {}), name: gameState.playerName || user.displayName || 'Гость', email: user.email || null, migratedFrom: oldId, updatedAt: serverTimestamp() }, { merge: true }); if (oldLbSnap.exists()){ const d = oldLbSnap.data(); await setDoc(doc(db,'leaderboard', newId), { ...d, uid: newId, name: gameState.playerName || d.name || 'Гость', updatedAt: serverTimestamp() }, { merge: true }); } await setAccountId(newId); try { await deleteDoc(oldLbRef); } catch {} return newId; }
 
-             async function persist(){ saveLocal(); dom.saveLabel.textContent = 'Сохранение: локально'; if (window.__tampered || window.__banned) return; try { const user = auth.currentUser; if (user) { await saveCloudForCurrentAccount(exportPayload()); dom.saveLabel.textContent = 'Сохранение: облако'; dom.cloudStatus.textContent = '☁ online'; } } catch { dom.cloudStatus.textContent = '⛅ offline'; } }
+                           async function persist(){ if (window.__tampered || window.__banned) return; try { const user = auth.currentUser; if (user) { await saveCloudForCurrentAccount(exportPayload()); dom.saveLabel.textContent = 'Сохранение: облако'; dom.cloudStatus.textContent = '☁ online'; } else { dom.saveLabel.textContent = 'Сохранение: требуется вход'; } } catch { dom.cloudStatus.textContent = '⛅ offline'; } }
 
       function setAdminUI(isAdmin, email){ gameState.admin.isAdmin = !!isAdmin; dom.tabAdmin.hidden = !isAdmin; dom.adminEmail.textContent = isAdmin ? (email || ADMIN_EMAIL) : '—'; }
 
@@ -545,18 +555,18 @@
         dom.boostBtn.addEventListener('click', ()=>activateBoost(2, 30_000, 120_000)); dom.boost3Btn.addEventListener('click', ()=>activateBoost(3, 15_000, 180_000)); dom.boost5Btn.addEventListener('click', ()=>activateBoost(5, 5_000, 300_000));
         dom.saveBtn.addEventListener('click', persist);
         dom.playerName.addEventListener('change', async ()=>{ const name = dom.playerName.value.trim().slice(0,24)||'Гость'; gameState.playerName = name; dom.userLabel.textContent = name; try{ await updateDisplayName(name);}catch{} });
-        dom.toggleHaptics.addEventListener('change', ()=>{ gameState.settings.haptics = dom.toggleHaptics.checked; saveLocal(); }); dom.toggleMotion.addEventListener('change', ()=>{ gameState.settings.reduceMotion = dom.toggleMotion.checked; saveLocal(); }); dom.toggleTheme.addEventListener('change', ()=>toggleTheme(dom.toggleTheme.checked)); dom.toggleSfx.addEventListener('change', ()=>{ gameState.settings.sfx = dom.toggleSfx.checked; saveLocal(); }); dom.toggleOffline.addEventListener('change', ()=>{ gameState.settings.offline = dom.toggleOffline.checked; saveLocal(); }); dom.themeSelect.addEventListener('change', ()=>{ gameState.settings.theme = dom.themeSelect.value; applyThemePalette(); saveLocal(); });
-        dom.keybindClick.addEventListener('change', ()=>{ gameState.settings.keybindClick = dom.keybindClick.value; saveLocal(); });
-        dom.resetBtn.addEventListener('click', ()=>{ if (confirm('Сбросить прогресс?')) { localStorage.removeItem(STORAGE_KEY); location.reload(); }});
+        dom.toggleHaptics.addEventListener('change', ()=>{ gameState.settings.haptics = dom.toggleHaptics.checked; persist(); }); dom.toggleMotion.addEventListener('change', ()=>{ gameState.settings.reduceMotion = dom.toggleMotion.checked; persist(); }); dom.toggleTheme.addEventListener('change', ()=>{ toggleTheme(dom.toggleTheme.checked); persist(); }); dom.toggleSfx.addEventListener('change', ()=>{ gameState.settings.sfx = dom.toggleSfx.checked; persist(); }); dom.toggleOffline.addEventListener('change', ()=>{ gameState.settings.offline = dom.toggleOffline.checked; persist(); }); dom.themeSelect.addEventListener('change', ()=>{ gameState.settings.theme = dom.themeSelect.value; applyThemePalette(); persist(); });
+        dom.keybindClick.addEventListener('change', ()=>{ gameState.settings.keybindClick = dom.keybindClick.value; persist(); });
+        dom.resetBtn.addEventListener('click', async ()=>{ if (confirm('Сбросить прогресс?')) { const accountId = await getAccountId(); if (accountId) { await setDoc(doc(db,'users', accountId), { coins: 0, coinsTotal: 0, perClick: 1, perSecond: 0, totalClicks: 0, prestige: 0, upgrades: Object.fromEntries(UPGRADE_CATALOG.map(u => [u.id, 0])), autos: Object.fromEntries(AUTO_CATALOG.map(a => [a.id, 0])), achievements: {}, redeemedCodes: {}, shards: 0, event: { name:'', multiplier:1, active:false }, updatedAt: serverTimestamp() }, { merge: true }); } location.reload(); }});
         dom.leaderboardSegs.forEach(btn => btn.addEventListener('click', ()=>switchLeaderboard(btn)));
         dom.dailyClaim.addEventListener('click', ()=>{ claimDaily(); persist(); });
-        dom.langSelect.addEventListener('change', ()=>{ gameState.settings.lang = dom.langSelect.value; applyLang(); saveLocal(); });
+        dom.langSelect.addEventListener('change', ()=>{ gameState.settings.lang = dom.langSelect.value; applyLang(); persist(); });
         dom.btnExport.addEventListener('click', ()=>{ dom.importText.value = btoa(unescape(encodeURIComponent(JSON.stringify(exportPayload())))); dom.importText.select(); document.execCommand('copy'); alert('Экспорт скопирован.'); });
-        dom.btnImport.addEventListener('click', ()=>{ try { const data = JSON.parse(decodeURIComponent(escape(atob(dom.importText.value.trim())))); importPayload(data); saveLocal(); location.reload(); } catch(e){ alert('Неверные данные импорта'); } });
+        dom.btnImport.addEventListener('click', async ()=>{ try { const data = JSON.parse(decodeURIComponent(escape(atob(dom.importText.value.trim())))); importPayload(data); await saveCloudForCurrentAccount(exportPayload()); location.reload(); } catch(e){ alert('Неверные данные импорта'); } });
         dom.snapshotSave.addEventListener('click', saveSnapshot);
         dom.snapshotRestore.addEventListener('click', restoreLastSnapshot);
         dom.promoRedeem.addEventListener('click', redeemPromo);
-        window.addEventListener('visibilitychange', ()=>{ if (document.hidden) persist(); }); window.addEventListener('beforeunload', ()=>{ persist(); });
+        window.addEventListener('visibilitychange', ()=>{ if (document.hidden) persist(); }); window.addEventListener('pagehide', ()=>{ persist(); });
 
         dom.linkToRegister.addEventListener('click', ()=>swapAuth('register')); dom.linkToLogin.addEventListener('click', ()=>swapAuth('login'));
         dom.formLogin.addEventListener('submit', async (e)=>{ e.preventDefault(); await handleLogin(); }); dom.formRegister.addEventListener('submit', async (e)=>{ e.preventDefault(); await handleRegister(); });
@@ -576,27 +586,29 @@
       function switchView(btn){ dom.tabs.forEach(b=>b.classList.remove('active')); btn.classList.add('active'); const target = btn.getAttribute('data-target'); dom.views.forEach(v=>{ const is = v.getAttribute('data-view')===target; v.toggleAttribute('hidden', !is); v.classList.toggle('active', is); }); }
       function switchLeaderboard(btn){ document.querySelectorAll('.segmented .seg').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); const kind = btn.getAttribute('data-kind'); const source = btn.getAttribute('data-source')||'all'; if (window.__lbUnsub) { try { window.__lbUnsub(); } catch{} } window.__lbUnsub = buildLeaderboard(kind, source); }
 
-      function toggleTheme(dark){ gameState.settings.themeDark = dark; if (dark) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); saveLocal(); }
+      function toggleTheme(dark){ gameState.settings.themeDark = dark; if (dark) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); }
       function applyThemePalette(){ const t = gameState.settings.theme || 'purple'; const root = document.documentElement; const palettes = { purple: ['#7c3aed', '#06b6d4'], emerald: ['#10b981', '#f59e0b'], rose: ['#e11d48', '#22d3ee'] }; const [p1, p2] = palettes[t] || palettes.purple; root.style.setProperty('--primary', p1); root.style.setProperty('--primary-2', p2); }
 
       function buildShop(){ renderShop(); }
       function buildLeaderboard(kind='coins', source='all'){ const coll = (source==='weekly')? 'leaderboard_weekly':'leaderboard'; const qy = query(collection(db, coll), orderBy(kind, 'desc'), limit(100)); return onSnapshot(qy, (snap)=>{ dom.leaderboardList.innerHTML=''; let idx=0; snap.forEach(d=>{ const it=d.data(); const li=document.createElement('li'); li.innerHTML = `<span>${++idx}. ${escapeHtml(it.name||'Гость')}</span><strong>${format(it[kind]||0)}</strong>`; dom.leaderboardList.appendChild(li); }); }); }
       function buildQuests(){ dom.questsList.innerHTML=''; for (const q of DAILY_QUESTS){ const li=document.createElement('li'); li.className='item'; const done = q.test({ daily: gameState.daily }); li.innerHTML = `<div class="meta"><span class="name">${q.name}</span><span class="desc">Награда: ${format(q.reward)}</span></div><div class="cta"><span class="badge ${done?'':''}">${done?'Готово':'В процессе'}</span></div>`; dom.questsList.appendChild(li);} dom.streak.textContent = String(gameState.daily.streak||0); }
-      function claimDaily(){ if (gameState.daily.claimed) { alert('Награда уже получена'); return; } gameState.coins += 500 + gameState.daily.streak*50; gameState.daily.claimed = true; renderStats(); saveLocal(); }
+      function claimDaily(){ if (gameState.daily.claimed) { alert('Награда уже получена'); return; } gameState.coins += 500 + gameState.daily.streak*50; gameState.daily.claimed = true; renderStats(); persist(); }
       function buildAchievements(){ dom.achievementsList.innerHTML=''; for (const a of ACHIEVEMENTS){ const unlocked = !!gameState.achievements[a.id]; const li=document.createElement('li'); li.className='item'; li.innerHTML = `<div class="meta"><span class="name">${a.name}</span><span class="desc">${a.desc}</span></div><div class="cta"><span class="badge" style="background:${unlocked?'rgba(16,185,129,.2)':'rgba(255,255,255,.08)'}">${unlocked?'Открыто':'Скрыто'}</span></div>`; dom.achievementsList.appendChild(li);} }
-      function checkAchievements(){ let changed=false; for (const a of ACHIEVEMENTS){ if (!gameState.achievements[a.id] && a.test(gameState)){ gameState.achievements[a.id] = true; gameState.coins += a.reward; changed = true; }} if (changed){ renderStats(); saveLocal(); } }
+      function checkAchievements(){ let changed=false; for (const a of ACHIEVEMENTS){ if (!gameState.achievements[a.id] && a.test(gameState)){ gameState.achievements[a.id] = true; gameState.coins += a.reward; changed = true; }} if (changed){ renderStats(); persist(); } }
 
       function applyLang(){ const L = TEXT[gameState.settings.lang] || TEXT.ru; const tabs = [L.game,L.shop,L.top,L.quests,L.achievements,L.settings,'Админ']; const tabEls = document.querySelectorAll('.tabs .tab'); tabEls.forEach((b,i)=>{ if (i < tabs.length) b.textContent = tabs[i]; }); const lbls = document.querySelectorAll('#view-game .stat .label'); lbls[0].textContent=L.coins; lbls[1].textContent=L.perClick; lbls[2].textContent=L.cps; lbls[3].textContent=L.prestige; lbls[4].textContent=L.clicks; dom.boostBtn.textContent=L.boost; dom.prestigeBtn.textContent=L.prestigeBtn; dom.saveBtn.textContent=L.save; dom.dailyClaim.textContent=L.daily; }
 
       function escapeHtml(s){ return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
-      function offlineGrant(){ if (!gameState.settings.offline) return; const now = Date.now(); const diffMs = now - (gameState.lastSeenMs || now); const hours = Math.min(8, diffMs/3600000); if (hours > 0) { const gain = gameState.perSecond * 3600 * hours; gameState.coins += gain; gameState.coinsTotal += gain; gameState.daily.earned += gain; } }
+      function offlineGrant(){ /* server-authoritative; offline calc removed */ }
 
       let unsubAnnouncement;
-      async function initialCloudSync(){ const user = auth.currentUser; if (!user) return; const cloud = await loadCloudForCurrentAccount(); if (cloud){ if (cloud.banned){ window.__banned = true; alert('Аккаунт заблокирован'); } importPayload(cloud); dom.playerName.value = gameState.playerName; dom.userLabel.textContent = gameState.playerName; renderStats(); renderShop(); buildQuests(); buildAchievements(); } if (unsubAnnouncement) unsubAnnouncement(); unsubAnnouncement = subscribeAnnouncement(); const acct = await getAccountId(); dom.acctId.value = acct || user.uid; dom.keybindClick.value = gameState.settings.keybindClick || 'Space'; }
+      async function initialCloudSync(){ const user = auth.currentUser; if (!user) return; const cloud = await loadCloudForCurrentAccount(); if (cloud){ if (cloud.banned){ window.__banned = true; alert('Аккаунт заблокирован'); } importPayload(cloud); dom.playerName.value = gameState.playerName; dom.userLabel.textContent = gameState.playerName; renderStats(); renderShop(); buildQuests(); buildAchievements(); } else { // create fresh cloud profile
+          await saveCloudForCurrentAccount(exportPayload());
+        } if (unsubAnnouncement) unsubAnnouncement(); unsubAnnouncement = subscribeAnnouncement(); const acct = await getAccountId(); dom.acctId.value = acct || user.uid; dom.keybindClick.value = gameState.settings.keybindClick || 'Space'; }
 
       function generateId(){ const rand = Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 10); const ts = Date.now().toString(36).slice(-6); return (rand + ts).slice(0, 16); }
 
-      async function handleRegister(){ try { const email = dom.regEmail.value.trim(); const pass = dom.regPassword.value; const name = dom.regName.value.trim().slice(0,24) || 'Гость'; const cred = await createUserWithEmailAndPassword(auth, email, pass); try{ await updateProfile(cred.user, { displayName: name }); }catch{} gameState.playerName = name; dom.playerName.value = name; await banForTamperIfNeeded(); if (!window.__banned) afterAuth({ showProfile: true }); } catch(e){ showAuthError(e); } }
+      async function handleRegister(){ try { const email = dom.regEmail.value.trim(); const pass = dom.regPassword.value; const name = dom.regName.value.trim().slice(0,24) || 'Гость'; const cred = await createUserWithEmailAndPassword(auth, email, pass); try{ await updateProfile(cred.user, { displayName: name }); }catch{} gameState.playerName = name; dom.playerName.value = name; await saveCloudForCurrentAccount(exportPayload()); await banForTamperIfNeeded(); if (!window.__banned) afterAuth({ showProfile: true }); } catch(e){ showAuthError(e); } }
       async function handleLogin(){ try { const email = dom.loginEmail.value.trim(); const pass = dom.loginPassword.value; await signInWithEmailAndPassword(auth, email, pass); await banForTamperIfNeeded(); if (!window.__banned) afterAuth({ showProfile: false }); } catch(e){ showAuthError(e); } }
 
       async function afterAuth(opts={}){ hideAuthOverlay(); dom.authSignout.hidden = false; dom.cloudStatus.textContent = '☁ online'; const user = auth.currentUser; const name = (user && (user.displayName || gameState.playerName)) || 'Гость'; dom.userLabel.textContent = name; gameState.playerName = name; dom.playerName.value = name; setAdminUI(user?.email === ADMIN_EMAIL, user?.email || undefined); await initialCloudSync(); startLeaderboardSubmit(); if (opts.showProfile) { const acct = await getAccountId(); dom.acctId.value = acct || user.uid; dom.profileOverlay.classList.remove('hidden'); } }
@@ -606,7 +618,7 @@
       async function saveSnapshot(){ try { const accountId = await getAccountId(); if (!accountId) return; const ts = Date.now(); await setDoc(doc(db, 'users', accountId, 'snapshots', String(ts)), { ts, payload: exportPayload(), createdAt: serverTimestamp() }); // keep last 3
         const qs = await getDocs(query(collection(db,'users',accountId,'snapshots'), orderBy('ts','desc'))); let i=0; for (const d of qs.docs){ i++; if (i>3) await deleteDoc(doc(db,'users',accountId,'snapshots', d.id)); }
         alert('Снапшот сохранён'); } catch(e){ alert('Ошибка снапшота'); } }
-      async function restoreLastSnapshot(){ try { const accountId = await getAccountId(); if (!accountId) return; const qs = await getDocs(query(collection(db,'users',accountId,'snapshots'), orderBy('ts','desc'), limit(1))); if (qs.empty) { alert('Снапшотов нет'); return; } const snap = qs.docs[0].data(); if (snap?.payload){ importPayload(snap.payload); renderStats(); renderShop(); saveLocal(); await saveCloudForCurrentAccount(exportPayload()); alert('Восстановлено'); } } catch(e){ alert('Ошибка восстановления'); } }
+      async function restoreLastSnapshot(){ try { const accountId = await getAccountId(); if (!accountId) return; const qs = await getDocs(query(collection(db,'users',accountId,'snapshots'), orderBy('ts','desc'), limit(1))); if (qs.empty) { alert('Снапшотов нет'); return; } const snap = qs.docs[0].data(); if (snap?.payload){ importPayload(snap.payload); renderStats(); renderShop(); await saveCloudForCurrentAccount(exportPayload()); alert('Восстановлено'); } } catch(e){ alert('Ошибка восстановления'); } }
 
       function redeemPromo(){ const raw = (dom.promoCode.value || '').trim(); if (!raw) return; redeemPromoCloudSafe(raw).catch(e=>alert(e.message||'Ошибка')); }
 
