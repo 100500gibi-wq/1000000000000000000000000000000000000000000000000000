@@ -283,7 +283,7 @@
 
     <audio id="click-sound" preload="auto"><source src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQgAAAAA//8AAP//AAD//wAA//8AAP//AAD//wAA" type="audio/wav" /></audio>
 
-    <script type="module">
+    <script id="app-module" type="module">
       import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
       import { getAnalytics } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-analytics.js';
       import { getAuth, onAuthStateChanged, signOut, updateProfile, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
@@ -297,12 +297,17 @@
       // --- Anti-tamper and integrity check ---
       let __tamperChecked = false;
       let __tamperDetected = false;
-             const INTEGRITY_SCRIPT_HASH = 3906505198; // auto-generated integrity hash
+             const INTEGRITY_SCRIPT_HASH = 1018650898; // auto-generated integrity hash
       function djb2(str){ let h = 5381 >>> 0; for (let i = 0; i < str.length; i++) { h = (((h << 5) + h) ^ str.charCodeAt(i)) >>> 0; } return h >>> 0; }
-      function getModuleScriptText(){ try { const scripts = Array.from(document.querySelectorAll('script[type="module"]')); const s = scripts[scripts.length - 1]; if (!s) return ''; return s.textContent || ''; } catch { return ''; } }
-      function computeCurrentScriptHash(){ const txt = getModuleScriptText().replace(/INTEGRITY_SCRIPT_HASH\s*=\s*\d+/, ''); return djb2(txt); }
+      function getModuleScriptText(){ try { const s = document.getElementById('app-module'); if (!s) return ''; return s.textContent || ''; } catch { return ''; } }
+      function computeCurrentScriptHash(){ const txt = getModuleScriptText().replace(/INTEGRITY_SCRIPT_HASH\s*=\s*\d+/, '').replace(/\n|\r/g,''); return djb2(txt); }
       function showTamperOverlay(){ try { const el = document.getElementById('tamper-overlay'); if (el) el.classList.remove('hidden'); } catch {} }
-      function detectTamper(){ if (__tamperChecked) return __tamperDetected; __tamperChecked = true; const cur = computeCurrentScriptHash(); __tamperDetected = (cur !== INTEGRITY_SCRIPT_HASH); if (__tamperDetected) { window.__tampered = true; showTamperOverlay(); const btn = document.getElementById('tamper-reload'); if (btn) btn.addEventListener('click', ()=>location.reload()); }
+      function detectTamper(){ if (__tamperChecked) return __tamperDetected; __tamperChecked = true; const cur = computeCurrentScriptHash(); __tamperDetected = (cur !== INTEGRITY_SCRIPT_HASH);
+        if (__tamperDetected) {
+          window.__tampered = true; showTamperOverlay();
+          try { console.warn('Tamper detected. expected=', INTEGRITY_SCRIPT_HASH, ' got=', cur); } catch {}
+          const btn = document.getElementById('tamper-reload'); if (btn) btn.addEventListener('click', ()=>location.reload());
+        }
         return __tamperDetected; }
              document.addEventListener('DOMContentLoaded', detectTamper);
        detectTamper();
