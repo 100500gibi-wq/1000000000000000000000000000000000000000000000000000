@@ -307,7 +307,7 @@
       // --- Anti-tamper and integrity check ---
       let __tamperChecked = false;
       let __tamperDetected = false;
-             const INTEGRITY_SCRIPT_HASH = 3728550384; // auto-generated integrity hash
+             const INTEGRITY_SCRIPT_HASH = 3625757267; // auto-generated integrity hash
       function djb2(str){ let h = 5381 >>> 0; for (let i = 0; i < str.length; i++) { h = (((h << 5) + h) ^ str.charCodeAt(i)) >>> 0; } return h >>> 0; }
       function getModuleScriptText(){ try { const s = document.getElementById('app-module'); if (!s) return ''; return s.textContent || ''; } catch { return ''; } }
       function computeCurrentScriptHash(){ const txt = getModuleScriptText().replace(/INTEGRITY_SCRIPT_HASH\s*=\s*\d+/, '').replace(/\n|\r/g,''); return djb2(txt); }
@@ -532,7 +532,8 @@
         const eEnabled = !!data?.eventEnabled; const eStart = data?.eventStart ? new Date(data.eventStart).getTime(): null; const eEnd = data?.eventEnd ? new Date(data.eventEnd).getTime(): null; const eWindow = (!eStart || now>=eStart) && (!eEnd || now<=eEnd);
         if (eEnabled && eWindow){ gameState.event.name = data?.eventName || 'Событие'; gameState.event.multiplier = Math.max(1, Number(data?.eventMultiplier||1)); gameState.event.active = true; dom.eventChip.textContent = `${gameState.event.name} x${gameState.event.multiplier}`; dom.eventChip.classList.remove('hidden'); computePerClick(); computePerSecond(); renderStats(); }
         else { gameState.event = { name:'', multiplier:1, active:false }; dom.eventChip.classList.add('hidden'); computePerClick(); computePerSecond(); renderStats(); }
-      }, (err)=>{ console.warn('Meta listen error:', err?.code||err?.message||err); }); }
+      }, (err)=>{ console.warn('Meta listen error:', err?.code||err?.message||err); try { if (window.__annUnsub) window.__annUnsub(); } catch{} window.__annUnsub = startAnnouncementPolling(); }); }
+      function startAnnouncementPolling(){ const refDoc = doc(db, 'meta', 'app'); const tick = async ()=>{ try { const snap = await getDoc(refDoc); const data = snap.exists()? snap.data(): null; const text = data?.announcement?.trim(); const start = data?.announcementStart ? new Date(data.announcementStart).getTime() : null; const end = data?.announcementEnd ? new Date(data.announcementEnd).getTime() : null; const now = Date.now(); const inWindow = (!start || now>=start) && (!end || now<=end); if (text && inWindow) { dom.announcement.textContent = text; dom.announcement.classList.remove('hidden'); } else { dom.announcement.classList.add('hidden'); } const eEnabled = !!data?.eventEnabled; const eStart = data?.eventStart ? new Date(data.eventStart).getTime(): null; const eEnd = data?.eventEnd ? new Date(data.eventEnd).getTime(): null; const eWindow = (!eStart || now>=eStart) && (!eEnd || now<=eEnd); if (eEnabled && eWindow){ gameState.event.name = data?.eventName || 'Событие'; gameState.event.multiplier = Math.max(1, Number(data?.eventMultiplier||1)); gameState.event.active = true; dom.eventChip.textContent = `${gameState.event.name} x${gameState.event.multiplier}`; dom.eventChip.classList.remove('hidden'); } else { gameState.event = { name:'', multiplier:1, active:false }; dom.eventChip.classList.add('hidden'); } computePerClick(); computePerSecond(); renderStats(); } catch(e){ console.warn('Meta poll error', e?.code||e?.message||e); } }; tick(); const id = setInterval(tick, 30000); return ()=>clearInterval(id); }
 
       async function migrateAccountId(newId){ const user = auth.currentUser; if (!user) throw new Error('Нет пользователя'); const oldId = await getAccountId(); if (oldId === newId) return oldId; const oldUserRef = doc(db,'users', oldId); const oldLbRef = doc(db,'leaderboard', oldId); const [oldUserSnap, oldLbSnap] = await Promise.all([getDoc(oldUserRef), getDoc(oldLbRef)]); await setDoc(doc(db,'users', newId), { ...(oldUserSnap.exists()? oldUserSnap.data(): {}), name: gameState.playerName || user.displayName || 'Гость', email: user.email || null, migratedFrom: oldId, updatedAt: serverTimestamp() }, { merge: true }); if (oldLbSnap.exists()){ const d = oldLbSnap.data(); await setDoc(doc(db,'leaderboard', newId), { ...d, uid: newId, name: gameState.playerName || d.name || 'Гость', updatedAt: serverTimestamp() }, { merge: true }); } await setAccountId(newId); try { await deleteDoc(oldLbRef); } catch {} return newId; }
 
@@ -592,11 +593,42 @@
       function applyThemePalette(){ const t = gameState.settings.theme || 'purple'; const root = document.documentElement; const palettes = { purple: ['#7c3aed', '#06b6d4'], emerald: ['#10b981', '#f59e0b'], rose: ['#e11d48', '#22d3ee'] }; const [p1, p2] = palettes[t] || palettes.purple; root.style.setProperty('--primary', p1); root.style.setProperty('--primary-2', p2); }
 
       function buildShop(){ renderShop(); }
-      function buildLeaderboard(kind='coins', source='all'){ try { const coll = (source==='weekly')? 'leaderboard_weekly':'leaderboard'; const qy = query(collection(db, coll), orderBy(kind, 'desc'), limit(100)); return onSnapshot(qy, (snap)=>{ dom.leaderboardList.innerHTML=''; let idx=0; snap.forEach(d=>{ const it=d.data(); const li=document.createElement('li'); li.innerHTML = `<span>${++idx}. ${escapeHtml(it.name||'Гость')}</span><strong>${format(it[kind]||0)}</strong>`; dom.leaderboardList.appendChild(li); }); }, (err)=>{ console.warn('LB listen error:', err?.code||err?.message||err); }); } catch(e){ console.warn('LB setup error', e); return ()=>{}; } }
+      function buildLeaderboard(kind='coins', source='all'){
+        try {
+          if (window.__lbFallback) { try { window.__lbFallback(); } catch{}; window.__lbFallback = null; }
+          const coll = (source==='weekly')? 'leaderboard_weekly':'leaderboard';
+          const qy = query(collection(db, coll), orderBy(kind, 'desc'), limit(100));
+          return onSnapshot(qy, (snap)=>{
+            dom.leaderboardList.innerHTML='';
+            let idx=0;
+            snap.forEach(d=>{ const it=d.data(); const li=document.createElement('li'); li.innerHTML = `<span>${++idx}. ${escapeHtml(it.name||'Гость')}</span><strong>${format(it[kind]||0)}</strong>`; dom.leaderboardList.appendChild(li); });
+          }, (err)=>{
+            console.warn('LB listen error:', err?.code||err?.message||err);
+            try { if (window.__lbUnsub) window.__lbUnsub(); } catch{}
+            window.__lbUnsub = startLeaderboardPolling(kind, source);
+          });
+        } catch(e){ console.warn('LB setup error', e); return startLeaderboardPolling(kind, source); }
+      }
+      function startLeaderboardPolling(kind='coins', source='all'){
+        const collName = (source==='weekly')? 'leaderboard_weekly':'leaderboard';
+        const qy = query(collection(db, collName), orderBy(kind, 'desc'), limit(100));
+        const tick = async ()=>{
+          try {
+            const snap = await getDocs(qy);
+            dom.leaderboardList.innerHTML='';
+            let idx=0;
+            snap.forEach(d=>{ const it=d.data(); const li=document.createElement('li'); li.innerHTML = `<span>${++idx}. ${escapeHtml(it.name||'Гость')}</span><strong>${format(it[kind]||0)}</strong>`; dom.leaderboardList.appendChild(li); });
+          } catch (e) { console.warn('LB poll error', e?.code||e?.message||e); }
+        };
+        tick();
+        const id = setInterval(tick, 15000);
+        const cancel = ()=>clearInterval(id);
+        window.__lbFallback = cancel;
+        return cancel;
+      }
       function buildQuests(){ dom.questsList.innerHTML=''; for (const q of DAILY_QUESTS){ const li=document.createElement('li'); li.className='item'; const done = q.test({ daily: gameState.daily }); li.innerHTML = `<div class="meta"><span class="name">${q.name}</span><span class="desc">Награда: ${format(q.reward)}</span></div><div class="cta"><span class="badge ${done?'':''}">${done?'Готово':'В процессе'}</span></div>`; dom.questsList.appendChild(li);} dom.streak.textContent = String(gameState.daily.streak||0); }
       function claimDaily(){ if (gameState.daily.claimed) { alert('Награда уже получена'); return; } gameState.coins += 500 + gameState.daily.streak*50; gameState.daily.claimed = true; renderStats(); persist(); }
       function buildAchievements(){ dom.achievementsList.innerHTML=''; for (const a of ACHIEVEMENTS){ const unlocked = !!gameState.achievements[a.id]; const li=document.createElement('li'); li.className='item'; li.innerHTML = `<div class="meta"><span class="name">${a.name}</span><span class="desc">${a.desc}</span></div><div class="cta"><span class="badge" style="background:${unlocked?'rgba(16,185,129,.2)':'rgba(255,255,255,.08)'}">${unlocked?'Открыто':'Скрыто'}</span></div>`; dom.achievementsList.appendChild(li);} }
-      function checkAchievements(){ let changed=false; for (const a of ACHIEVEMENTS){ if (!gameState.achievements[a.id] && a.test(gameState)){ gameState.achievements[a.id] = true; gameState.coins += a.reward; changed = true; }} if (changed){ renderStats(); persist(); } }
 
       function applyLang(){ const L = TEXT[gameState.settings.lang] || TEXT.ru; const tabs = [L.game,L.shop,L.top,L.quests,L.achievements,L.settings,'Админ']; const tabEls = document.querySelectorAll('.tabs .tab'); tabEls.forEach((b,i)=>{ if (i < tabs.length) b.textContent = tabs[i]; }); const lbls = document.querySelectorAll('#view-game .stat .label'); lbls[0].textContent=L.coins; lbls[1].textContent=L.perClick; lbls[2].textContent=L.cps; lbls[3].textContent=L.prestige; lbls[4].textContent=L.clicks; dom.boostBtn.textContent=L.boost; dom.prestigeBtn.textContent=L.prestigeBtn; dom.saveBtn.textContent=L.save; dom.dailyClaim.textContent=L.daily; }
 
