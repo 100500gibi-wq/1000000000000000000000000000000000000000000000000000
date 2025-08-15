@@ -296,7 +296,7 @@
       import { getAnalytics } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-analytics.js';
       import { getAuth, onAuthStateChanged, signOut, updateProfile, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
       import { getFirestore, initializeFirestore, memoryLocalCache, doc, getDoc, setDoc, serverTimestamp, collection, query, orderBy, limit, onSnapshot, getDocs, deleteDoc, updateDoc, increment, where } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
-      import { getDatabase, ref as dbRef, set as dbSet, update as dbUpdate, get as dbGet, child as dbChild, serverTimestamp as rtdbServerTimestamp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js';
+      import { getDatabase, ref as dbRef, set as dbSet, update as dbUpdate, get as dbGet, child as dbChild, serverTimestamp as rtdbServerTimestamp, onDisconnect } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js';
 
       const ADMIN_EMAIL = '100500gibi@gmail.com';
       const firebaseConfig = { apiKey: "AIzaSyASVz3W__rbF2Sq8QzLvax0Vt3HahUJQMY", authDomain: "clicker-helloworld.firebaseapp.com", databaseURL: "https://clicker-helloworld-default-rtdb.firebaseio.com", projectId: "clicker-helloworld", storageBucket: "clicker-helloworld.firebasestorage.app", messagingSenderId: "1031868712105", appId: "1:1031868712105:web:d00e5c65213b48e1f315b8", measurementId: "G-3E8RK0M1WJ" };
@@ -307,7 +307,7 @@
       // --- Anti-tamper and integrity check ---
       let __tamperChecked = false;
       let __tamperDetected = false;
-             const INTEGRITY_SCRIPT_HASH = 3135022554; // auto-generated integrity hash
+             const INTEGRITY_SCRIPT_HASH = 4009612994; // auto-generated integrity hash
       function djb2(str){ let h = 5381 >>> 0; for (let i = 0; i < str.length; i++) { h = (((h << 5) + h) ^ str.charCodeAt(i)) >>> 0; } return h >>> 0; }
       function getModuleScriptText(){ try { const s = document.getElementById('app-module'); if (!s) return ''; return s.textContent || ''; } catch { return ''; } }
       function computeCurrentScriptHash(){ const txt = getModuleScriptText().replace(/INTEGRITY_SCRIPT_HASH\s*=\s*\d+/, '').replace(/\n|\r/g,''); return djb2(txt); }
@@ -480,8 +480,8 @@
       function globalMultiplier(){ return (gameState.boost?.multiplier||1) * (gameState.event?.multiplier||1) * artifactMultiplier(); }
       function computePerClick() { let base = 1 + gameState.prestige; for (const u of UPGRADE_CATALOG) base += gameState.upgrades[u.id] * (u.perLevel||0); base *= globalMultiplier(); gameState.perClick = base; }
       function computePerSecond() { let cps = 0; for (const a of AUTO_CATALOG) cps += gameState.autos[a.id] * a.cps; cps *= (1 + gameState.prestige * 0.05); cps *= globalMultiplier(); gameState.perSecond = cps; }
-      function getUpgradeCost(u) { const level = gameState.upgrades[u.id]; return Math.floor(u.baseCost * Math.pow(u.growth, level)); }
-      function getAutoCost(a) { const owned = gameState.autos[a.id]; return Math.floor(a.baseCost * Math.pow(a.growth, owned)); }
+      function getUpgradeCost(u) { const level = Math.max(0, Number(gameState.upgrades[u.id]||0)); return Math.floor(u.baseCost * Math.pow(u.growth, level)); }
+      function getAutoCost(a) { const owned = Math.max(0, Number(gameState.autos[a.id]||0)); return Math.floor(a.baseCost * Math.pow(a.growth, owned)); }
 
       function renderStats() { dom.coins.textContent = format(gameState.coins); dom.perClick.textContent = format(gameState.perClick); dom.cps.textContent = format(gameState.perSecond); dom.prestige.textContent = format(gameState.prestige); dom.clicks.textContent = format(gameState.totalClicks); const progress = Math.max(0, Math.min(100, (gameState.coins / 1000) * 100)); dom.prestigeProgress.style.width = progress + '%'; renderBoostChip(); renderComboChip(); renderShardsChip(); }
       function renderBoostChip() { const now = Date.now(); if (gameState.boost.activeUntil > now) { dom.boostChip.classList.remove('hidden'); const rem = Math.max(0, Math.floor((gameState.boost.activeUntil - now)/1000)); const m = String(Math.floor(rem/60)).padStart(2,'0'); const s = String(rem%60).padStart(2,'0'); dom.boostChip.textContent = `x${gameState.boost.multiplier} ${m}:${s}`; } else { dom.boostChip.classList.add('hidden'); }
@@ -655,11 +655,11 @@
         alert('Снапшот сохранён'); } catch(e){ alert('Ошибка снапшота'); } }
       async function restoreLastSnapshot(){ try { const accountId = await getAccountId(); if (!accountId) return; const qs = await getDocs(query(collection(db,'users',accountId,'snapshots'), orderBy('ts','desc'), limit(1))); if (qs.empty) { alert('Снапшотов нет'); return; } const snap = qs.docs[0].data(); if (snap?.payload){ importPayload(snap.payload); renderStats(); renderShop(); await saveCloudForCurrentAccount(exportPayload()); alert('Восстановлено'); } } catch(e){ alert('Ошибка восстановления'); } }
 
-      function redeemPromo(){ const raw = (dom.promoCode.value || '').trim(); if (!raw) return; redeemPromoCloudSafe(raw).catch(e=>alert(e.message||'Ошибка')); }
+      function redeemPromo(){ const raw = (dom.promoCode.value || '').trim(); if (!raw) return; redeemPromoCloudSafe(raw).catch(e=>{ alert(e?.message||'Ошибка'); }); }
 
       async function boot(){
         loadLocal(); computePerClick(); computePerSecond(); offlineGrant(); dom.playerName.value = gameState.playerName; dom.userLabel.textContent = gameState.playerName; dom.toggleHaptics.checked = !!gameState.settings.haptics; dom.toggleMotion.checked = !!gameState.settings.reduceMotion; dom.toggleTheme.checked = !!gameState.settings.themeDark; dom.toggleSfx.checked = !!gameState.settings.sfx; dom.toggleOffline.checked = !!gameState.settings.offline; dom.langSelect.value = gameState.settings.lang || 'ru'; dom.themeSelect.value = gameState.settings.theme || 'purple'; dom.keybindClick.value = gameState.settings.keybindClick || 'Space'; applyLang(); toggleTheme(!!gameState.settings.themeDark); applyThemePalette(); renderStats(); bindUI(); buildShop(); loop(); bootBuildLeaderboardDefaults(); buildQuests(); buildAchievements(); checkAchievements();
-        onAuthStateChanged(auth, async (user)=>{ if (user) { dom.authSignout.hidden = false; dom.cloudStatus.textContent = '☁ online'; hideAuthOverlay(); setAdminUI(user.email === ADMIN_EMAIL, user.email); await banForTamperIfNeeded(); if (window.__banned) return; startLeaderboardSubmit(); initialCloudSync(); if (user.displayName){ dom.userLabel.textContent = user.displayName; dom.playerName.value = user.displayName; gameState.playerName = user.displayName; } try { const acct = await getAccountId(); await dbUpdate(dbRef(rtdb, `presence/${acct}`), { online: true, ts: Date.now(), userAgent: navigator.userAgent||'web' }); } catch {} } else { setAdminUI(false); showAuthOverlay('login'); if (unsubAnnouncement) { unsubAnnouncement(); unsubAnnouncement = null; } cachedAccountId = null; }});
+        onAuthStateChanged(auth, async (user)=>{ if (user) { dom.authSignout.hidden = false; dom.cloudStatus.textContent = '☁ online'; hideAuthOverlay(); setAdminUI(user.email === ADMIN_EMAIL, user.email); await banForTamperIfNeeded(); if (window.__banned) return; startLeaderboardSubmit(); initialCloudSync(); if (user.displayName){ dom.userLabel.textContent = user.displayName; dom.playerName.value = user.displayName; gameState.playerName = user.displayName; } try { const acct = await getAccountId(); const pRef = dbRef(rtdb, `presence/${acct}`); await dbUpdate(pRef, { online: true, ts: Date.now(), userAgent: navigator.userAgent||'web' }); try { onDisconnect(pRef).update({ online: false, ts: Date.now() }); } catch {} } catch {} } else { setAdminUI(false); showAuthOverlay('login'); if (unsubAnnouncement) { unsubAnnouncement(); unsubAnnouncement = null; } cachedAccountId = null; }});
       }
 
       // Initialize integrity baseline and watchdog after functions are defined
