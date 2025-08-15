@@ -1,0 +1,579 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#111827" />
+    <title>Global Clicker</title>
+    <meta name="description" content="Глобальный кликер: апгрейды, автокликеры, бусты, достижения, квесты, облако и админка." />
+    <style>
+      :root { --bg: #0b1220; --card: rgba(255,255,255,0.06); --text: #e5e7eb; --muted: #94a3b8; --primary: #7c3aed; --primary-2: #06b6d4; --danger: #ef4444; --ok: #10b981; --ring: rgba(124, 58, 237, 0.4); }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; background: radial-gradient(1200px 800px at 10% 10%, #0f172a 0%, #0b1220 35%, #070b14 100%); color: var(--text); }
+      .app-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; }
+      .brand { display: flex; align-items: center; gap: 10px; }
+      .brand .logo { font-size: 24px; }
+      .brand h1 { font-size: 18px; margin: 0; letter-spacing: .3px; }
+      .user-area { display: flex; gap: 8px; align-items: center; }
+      .chip { background: var(--card); color: var(--muted); padding: 6px 10px; border-radius: 999px; font-size: 12px; }
+      #announcement { margin: 8px 12px 0; }
+      .tabs { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; padding: 8px 12px; }
+      .tab { background: var(--card); color: var(--text); border: 1px solid transparent; padding: 10px 8px; border-radius: 12px; cursor: pointer; }
+      .tab.active, .tab:focus-visible { outline: none; border-color: var(--ring); box-shadow: 0 0 0 3px var(--ring); }
+      .views { padding: 12px; max-width: 1100px; margin: 0 auto; }
+      .view { background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03)); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 16px; }
+      .view + .view { margin-top: 12px; }
+      .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 16px; }
+      .stat { background: var(--card); padding: 10px; border-radius: 12px; text-align: center; }
+      .stat .label { color: var(--muted); font-size: 12px; display: block; }
+      .stat .value { font-size: 18px; font-weight: 700; }
+      .progress { inline-size: 100%; block-size: 8px; background: rgba(255,255,255,.08); border-radius: 999px; overflow: hidden; }
+      .progress > span { display: block; block-size: 100%; inline-size: 0%; background: linear-gradient(90deg, var(--primary), var(--primary-2)); transition: inline-size .2s ease; }
+      .big-btn { width: 100%; aspect-ratio: 1 / 1; max-height: 360px; border-radius: 24px; border: 0; background: radial-gradient(160px 160px at 30% 30%, var(--primary) 0%, #5b21b6 40%, #3b0764 100%); color: white; font-size: clamp(28px, 6vw, 48px); font-weight: 900; letter-spacing: 2px; text-shadow: 0 4px 24px rgba(0,0,0,.35); cursor: pointer; transition: transform .05s ease, filter .2s ease; will-change: transform; user-select: none; }
+      .big-btn:active { transform: scale(.98); filter: brightness(1.05); }
+      .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+      .btn { background: linear-gradient(180deg, rgba(124,58,237,.18), rgba(124,58,237,.08)); border: 1px solid rgba(124,58,237,.35); color: var(--text); padding: 10px 12px; border-radius: 12px; cursor: pointer; }
+      .btn.ghost { background: transparent; border-color: rgba(255,255,255,.1); }
+      .btn.danger { background: linear-gradient(180deg, rgba(239,68,68,.18), rgba(239,68,68,.08)); border-color: rgba(239,68,68,.35); }
+      .btn.ok { background: linear-gradient(180deg, rgba(16,185,129,.18), rgba(16,185,129,.08)); border-color: rgba(16,185,129,.35); }
+      .btn:disabled { opacity: .5; cursor: not-allowed; }
+      .shop-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+      @media (min-width: 860px) { .shop-grid { grid-template-columns: repeat(2, 1fr); } }
+      .list { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+      .item { display: flex; justify-content: space-between; align-items: center; background: var(--card); border: 1px solid rgba(255,255,255,.06); border-radius: 12px; padding: 10px; }
+      .item .meta { display: flex; flex-direction: column; gap: 4px; }
+      .item .name { font-weight: 600; }
+      .item .desc { color: var(--muted); font-size: 12px; }
+      .item .cost { font-weight: 700; }
+      .leaderboard { display: grid; gap: 8px; padding: 0; margin: 0; }
+      .leaderboard li { background: var(--card); padding: 10px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; }
+      .segmented { display: inline-flex; gap: 6px; background: var(--card); padding: 6px; border-radius: 999px; border: 1px solid rgba(255,255,255,.06) }
+      .segmented button { border: 0; background: transparent; color: var(--text); padding: 6px 10px; border-radius: 999px; cursor: pointer; }
+      .segmented .active { background: rgba(255,255,255,.08); }
+      .settings { display: grid; gap: 12px; }
+      .field { display: grid; gap: 6px; }
+      .field input, .field select, .field textarea { background: var(--card); border: 1px solid rgba(255,255,255,.08); color: var(--text); padding: 10px 12px; border-radius: 12px; }
+      .switch { display: flex; align-items: center; gap: 10px; }
+      .switch input { inline-size: 44px; block-size: 24px; accent-color: var(--primary); }
+      .footer { display: flex; justify-content: center; gap: 8px; padding: 16px; color: var(--muted); }
+      .sep { opacity: .6; }
+      .badge { display:inline-flex; align-items:center; gap:6px; background: rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.1); padding:6px 10px; border-radius:999px; font-size:12px; }
+      .hidden { display: none !important; }
+      .error { color: var(--danger); margin: 8px 0; }
+      .link { color: var(--primary); cursor: pointer; text-decoration: underline; }
+      .overlay { position: fixed; inset: 0; background: rgba(2,6,23,.6); backdrop-filter: blur(6px); display: grid; place-items: center; z-index: 50; }
+      .modal { width: min(92vw, 560px); background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.06)); border:1px solid rgba(255,255,255,.12); border-radius: 16px; padding: 18px; box-shadow: 0 20px 60px rgba(0,0,0,.4); }
+      .modal h2 { margin: 0 0 6px 0; font-size: 20px; }
+      .modal p { margin: 0 0 12px 0; color: var(--muted); font-size: 14px; }
+      .row { display: grid; gap: 8px; margin-bottom: 10px; }
+      .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      @media (prefers-color-scheme: light) { :root { --bg: #f1f5f9; --text: #0b1220; --card: rgba(0,0,0,0.04); --muted: #334155; } body { background: radial-gradient(1200px 800px at 10% 10%, #e2e8f0 0%, #e5e7eb 35%, #f1f5f9 100%); } }
+      @media (prefers-reduced-motion: reduce) { .big-btn { transition: none; } }
+    </style>
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="brand"><span class="logo" aria-hidden="true">⚡</span><h1 id="title">Global Clicker</h1></div>
+      <div class="user-area"><span id="cloud-status" class="chip">⛅ offline</span><span id="boost-chip" class="chip hidden">x2 00:00</span><span id="combo-chip" class="chip hidden">Combo x1</span><span id="shards-chip" class="chip hidden">Shards 0</span><button id="auth-signout" class="btn ghost" title="Выйти" hidden>Выйти</button></div>
+    </header>
+
+    <div id="announcement" class="chip hidden"></div>
+    <div id="version-chip" class="chip" style="margin:8px 12px 0">v2025.08 Global Update</div>
+    <div id="event-chip" class="chip hidden" style="margin:8px 12px 0">Событие x1</div>
+
+    <nav class="tabs" role="tablist" aria-label="Навигация">
+      <button class="tab active" data-target="game" role="tab" aria-selected="true">Игра</button>
+      <button class="tab" data-target="shop" role="tab" aria-selected="false">Магазин</button>
+      <button class="tab" data-target="leaderboard" role="tab" aria-selected="false">Топ</button>
+      <button class="tab" data-target="quests" role="tab" aria-selected="false">Квесты</button>
+      <button class="tab" data-target="achievements" role="tab" aria-selected="false">Ачивки</button>
+      <button class="tab" data-target="settings" role="tab" aria-selected="false">Настройки</button>
+      <button id="tab-admin" class="tab" data-target="admin" role="tab" aria-selected="false" hidden>Админ</button>
+    </nav>
+
+    <main class="views">
+      <section id="view-game" data-view="game" class="view active">
+        <div class="stats">
+          <div class="stat"><span class="label">Монеты</span><span id="coins" class="value">0</span></div>
+          <div class="stat"><span class="label">За клик</span><span id="perClick" class="value">1</span></div>
+          <div class="stat"><span class="label">в сек</span><span id="cps" class="value">0</span></div>
+          <div class="stat"><span class="label">Престиж</span><span id="prestige" class="value">0</span></div>
+          <div class="stat"><span class="label">Клики</span><span id="clicks" class="value">0</span></div>
+        </div>
+        <div class="progress" aria-label="Прогресс до престижа"><span id="prestige-progress" style="width:0%"></span></div>
+        <button id="big-click" class="big-btn" aria-label="Кликнуть">КЛИК</button>
+        <div class="actions">
+          <button id="boost-btn" class="btn ok" title="x2 на 30 сек (кд 2 мин)">Буст x2</button>
+          <button id="boost3-btn" class="btn ok" title="x3 на 15 сек (кд 3 мин)">Буст x3</button>
+          <button id="boost5-btn" class="btn ok" title="x5 на 5 сек (кд 5 мин)">Буст x5</button>
+          <button id="prestige-btn" class="btn" title="Сбросить прогресс и получить очки престижа">Престиж</button>
+          <button id="save-btn" class="btn ghost" title="Сохранить в облако">Сохранить</button>
+        </div>
+      </section>
+
+      <section id="view-shop" data-view="shop" class="view" hidden>
+        <h2>Магазин улучшений</h2>
+        <div class="shop-grid">
+          <div><h3>Клики</h3><ul id="upgrade-list" class="list"></ul></div>
+          <div><h3>Автокликеры</h3><ul id="auto-list" class="list"></ul></div>
+        </div>
+      </section>
+
+      <section id="view-leaderboard" data-view="leaderboard" class="view" hidden>
+        <h2>Таблица лидеров</h2>
+        <div class="segmented" role="tablist" aria-label="Сортировка">
+          <button class="seg active" data-kind="coins" data-source="all">Монеты</button>
+          <button class="seg" data-kind="coins" data-source="weekly">Неделя</button>
+          <button class="seg" data-kind="clicks" data-source="all">Клики</button>
+          <button class="seg" data-kind="prestige" data-source="all">Престиж</button>
+          <button class="seg" data-kind="maxCombo" data-source="all">Комбо</button>
+        </div>
+        <ol id="leaderboard-list" class="leaderboard" style="margin-top:12px"></ol>
+      </section>
+
+      <section id="view-quests" data-view="quests" class="view" hidden>
+        <h2>Ежедневные квесты</h2>
+        <ul id="quests-list" class="list"></ul>
+        <div class="actions"><button id="daily-claim" class="btn ok">Забрать ежедневную награду</button><span id="streak-badge" class="badge">Серия: <strong id="streak">0</strong></span></div>
+      </section>
+
+      <section id="view-achievements" data-view="achievements" class="view" hidden>
+        <h2>Достижения</h2>
+        <ul id="achievements-list" class="list"></ul>
+      </section>
+
+      <section id="view-settings" data-view="settings" class="view" hidden>
+        <h2>Настройки</h2>
+        <div class="settings">
+          <label class="field"><span>Имя игрока</span><input id="player-name" type="text" placeholder="Гость" maxlength="24" /></label>
+          <div class="switch"><input id="toggle-haptics" type="checkbox" checked /><span>Вибрация (моб.)</span></div>
+          <div class="switch"><input id="toggle-sfx" type="checkbox" /><span>Звук клика</span></div>
+          <div class="switch"><input id="toggle-offline" type="checkbox" checked /><span>Оффлайн прогресс</span></div>
+          <div class="switch"><input id="toggle-motion" type="checkbox" /><span>Меньше анимаций</span></div>
+          <div class="switch"><input id="toggle-theme" type="checkbox" /><span>Тёмная тема</span></div>
+          <label class="field"><span>Цветовая тема</span><select id="theme-select"><option value="purple">Фиолетовая</option><option value="emerald">Изумруд</option><option value="rose">Роза</option></select></label>
+          <label class="field"><span>Кнопка клика</span><select id="keybind-click"><option value="Space">Space</option><option value="Enter">Enter</option><option value="KeyK">K</option></select></label>
+          <label class="field"><span>Промокод</span><input id="promo-code" type="text" placeholder="Введите код" /></label>
+          <div class="actions"><button id="promo-redeem" class="btn">Активировать</button></div>
+          <label class="field"><span>Язык</span><select id="lang-select"><option value="ru">Русский</option><option value="en">English</option></select></label>
+          <details><summary>Импорт/Экспорт</summary><div class="field"><textarea id="import-text" rows="4" placeholder="Вставьте сохранение"></textarea></div><div class="actions"><button id="btn-export" class="btn">Экспорт</button><button id="btn-import" class="btn">Импорт</button></div></details>
+          <div class="actions"><button id="snapshot-save" class="btn">Сделать снапшот</button><button id="snapshot-restore" class="btn ghost">Восстановить последний</button></div>
+          <button id="reset-btn" class="btn danger">Сбросить прогресс</button>
+        </div>
+      </section>
+
+      <section id="view-admin" data-view="admin" class="view" hidden>
+        <h2>Админ-панель</h2>
+        <p class="muted">Почта админа: <strong id="admin-email">—</strong></p>
+        <div class="grid2">
+          <div>
+            <h3>Выдать монеты</h3>
+            <label class="field"><span>ID аккаунта</span><input id="admin-uid" type="text" placeholder="accountId" /></label>
+            <label class="field"><span>Сколько добавить</span><input id="admin-amount" type="number" value="1000" /></label>
+            <button id="admin-grant" class="btn ok">Выдать</button>
+          </div>
+          <div>
+            <h3>Объявление</h3>
+            <label class="field"><span>Текст</span><textarea id="admin-announce" rows="4" placeholder="Текст баннера"></textarea></label>
+            <div class="grid2">
+              <label class="field"><span>Начало (ISO)</span><input id="admin-announce-start" type="datetime-local" /></label>
+              <label class="field"><span>Конец (ISO)</span><input id="admin-announce-end" type="datetime-local" /></label>
+            </div>
+            <div class="actions"><button id="admin-announce-save" class="btn">Сохранить</button><button id="admin-announce-clear" class="btn ghost">Очистить</button></div>
+          </div>
+          <div>
+            <h3>Событие</h3>
+            <label class="field"><span>Название</span><input id="admin-event-name" type="text" placeholder="Например: Весенний ивент" /></label>
+            <div class="grid2">
+              <label class="field"><span>Множитель</span><input id="admin-event-mult" type="number" step="0.1" value="1" /></label>
+              <label class="field"><span>Включено</span><select id="admin-event-enabled"><option value="true">Да</option><option value="false">Нет</option></select></label>
+            </div>
+            <div class="grid2">
+              <label class="field"><span>Начало</span><input id="admin-event-start" type="datetime-local" /></label>
+              <label class="field"><span>Конец</span><input id="admin-event-end" type="datetime-local" /></label>
+            </div>
+            <div class="actions"><button id="admin-event-save" class="btn ok">Сохранить</button><button id="admin-event-clear" class="btn ghost">Отключить</button></div>
+          </div>
+        </div>
+        <div class="grid2">
+          <div>
+            <h3>Снапшоты</h3>
+            <div class="actions"><button id="admin-load-snaps" class="btn">Показать снапшоты</button><button id="admin-purge-oldlb" class="btn ghost" title=">90д">Очистить старые записи LB</button></div>
+            <ol id="admin-snaps" class="leaderboard"></ol>
+          </div>
+          <div>
+            <h3>Промокоды</h3>
+            <div class="grid2">
+              <label class="field"><span>Код</span><input id="admin-promo-code" type="text" placeholder="НАПРИМЕР: START2025" /></label>
+              <label class="field"><span>Тип</span><select id="admin-promo-type"><option value="coins">Монеты</option><option value="prestige">Престиж</option><option value="boost">Буст</option></select></label>
+            </div>
+            <div class="grid2">
+              <label class="field"><span>Сумма/значение</span><input id="admin-promo-amount" type="number" value="1000" /></label>
+              <label class="field"><span>Множитель буста</span><input id="admin-promo-mult" type="number" value="2" /></label>
+            </div>
+            <div class="grid2">
+              <label class="field"><span>Длительность буста (сек)</span><input id="admin-promo-duration" type="number" value="30" /></label>
+              <label class="field"><span>Лимит на код</span><input id="admin-promo-max" type="number" value="0" /></label>
+            </div>
+            <div class="grid2">
+              <label class="field"><span>Лимит на пользователя</span><input id="admin-promo-peruser" type="number" value="1" /></label>
+              <label class="field"><span>Включен</span><select id="admin-promo-enabled"><option value="true">Да</option><option value="false">Нет</option></select></label>
+            </div>
+            <div class="grid2">
+              <label class="field"><span>Начало</span><input id="admin-promo-start" type="datetime-local" /></label>
+              <label class="field"><span>Конец</span><input id="admin-promo-end" type="datetime-local" /></label>
+            </div>
+            <div class="actions">
+              <button id="admin-promo-save" class="btn ok">Создать/Сохранить</button>
+              <button id="admin-promo-delete" class="btn danger">Удалить</button>
+              <button id="admin-promo-load" class="btn">Обновить список</button>
+            </div>
+            <ol id="admin-promo-list" class="leaderboard"></ol>
+          </div>
+        </div>
+        <div class="actions" style="margin-top:12px"><button id="admin-reset-lb" class="btn danger">Очистить таблицу лидеров</button><button id="admin-reset-lbw" class="btn danger">Очистить недельный LB</button><button id="admin-refresh-users" class="btn">Обновить топ пользователей</button></div>
+        <h3 style="margin-top:12px">Топ пользователей (по монетам)</h3>
+        <ol id="admin-users" class="leaderboard"></ol>
+      </section>
+    </main>
+
+    <footer class="footer"><span id="user-label">Гость</span><span class="sep">·</span><span id="save-label">Сохранение: локально</span></footer>
+
+    <div id="auth-overlay" class="overlay hidden" role="dialog" aria-modal="true">
+      <div class="modal">
+        <h2 id="auth-title">Вход</h2>
+        <p id="auth-desc">Добро пожаловать! Войдите или создайте аккаунт.</p>
+        <div id="auth-error" class="error hidden"></div>
+        <form id="form-login" class="row">
+          <label class="field"><span>Email</span><input id="login-email" type="email" autocomplete="username" required /></label>
+          <label class="field"><span>Пароль</span><input id="login-password" type="password" autocomplete="current-password" required /></label>
+          <button id="btn-login" type="submit" class="btn">Войти</button>
+          <div><span class="link" id="link-to-register">Нет аккаунта? Зарегистрироваться</span> · <span class="link" id="link-reset">Забыли пароль?</span></div>
+          <div class="actions"><button id="btn-login-guest" type="button" class="btn ghost">Гость</button></div>
+        </form>
+        <form id="form-register" class="row hidden">
+          <label class="field"><span>Ник</span><input id="reg-name" type="text" maxlength="24" placeholder="Игрок" /></label>
+          <label class="field"><span>Email</span><input id="reg-email" type="email" autocomplete="username" required /></label>
+          <label class="field"><span>Пароль</span><input id="reg-password" type="password" autocomplete="new-password" required /></label>
+          <button id="btn-register" type="submit" class="btn ok">Зарегистрироваться</button>
+          <div><span class="link" id="link-to-login">Уже есть аккаунт? Войти</span></div>
+          <div class="actions"><button id="btn-register-guest" type="button" class="btn ghost">Гость</button></div>
+        </form>
+      </div>
+    </div>
+
+    <div id="profile-overlay" class="overlay hidden" role="dialog" aria-modal="true">
+      <div class="modal">
+        <h2>Профиль</h2>
+        <p>Ваш ID аккаунта используется для облачных сохранений и таблицы лидеров.</p>
+        <div class="row">
+          <label class="field"><span>Текущий ID</span><input id="acct-id" type="text" readonly /></label>
+          <div class="actions"><button id="acct-copy" class="btn">Скопировать</button><button id="acct-generate" class="btn danger">Сгенерировать новый ID</button><button id="acct-close" class="btn ghost">Закрыть</button></div>
+          <small class="muted">При смене ID ваши данные будут перенесены. Старый ID перестанет обновляться.</small>
+        </div>
+      </div>
+    </div>
+
+    <div id="tamper-overlay" class="overlay hidden" role="alertdialog" aria-modal="true">
+      <div class="modal">
+        <h2>Подозрение на модификацию</h2>
+        <p>Обнаружены изменения исходного кода клиента. Для безопасности функционал ограничен.</p>
+        <div class="actions"><button id="tamper-reload" class="btn">Перезагрузить</button></div>
+      </div>
+    </div>
+
+    <audio id="click-sound" preload="auto"><source src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQgAAAAA//8AAP//AAD//wAA//8AAP//AAD//wAA" type="audio/wav" /></audio>
+
+    <script type="module">
+      import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
+      import { getAnalytics } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-analytics.js';
+      import { getAuth, onAuthStateChanged, signInAnonymously, signOut, updateProfile, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
+      import { getFirestore, doc, getDoc, setDoc, serverTimestamp, collection, query, orderBy, limit, onSnapshot, getDocs, deleteDoc } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
+
+      const ADMIN_EMAIL = '100500gibi@gmail.com';
+      const firebaseConfig = { apiKey: "AIzaSyCivFOydMEfdAhfLtZ6REK58HsnvhNe1MY", authDomain: "clicker-16115.firebaseapp.com", databaseURL: "https://clicker-16115-default-rtdb.firebaseio.com", projectId: "clicker-16115", storageBucket: "clicker-16115.firebasestorage.app", messagingSenderId: "294380892371", appId: "1:294380892371:web:cbeb0970cb2ff312376426", measurementId: "G-2143SHDR89" };
+      const app = initializeApp(firebaseConfig); try { getAnalytics(app); } catch {}
+      const auth = getAuth(app); const db = getFirestore(app);
+
+      // --- Anti-tamper and integrity check ---
+      let __tamperChecked = false;
+      let __tamperDetected = false;
+             const INTEGRITY_SCRIPT_HASH = 2567858342; // auto-generated integrity hash
+      function djb2(str){ let h = 5381 >>> 0; for (let i = 0; i < str.length; i++) { h = (((h << 5) + h) ^ str.charCodeAt(i)) >>> 0; } return h >>> 0; }
+      function getModuleScriptText(){ try { const scripts = Array.from(document.querySelectorAll('script[type="module"]')); const s = scripts[scripts.length - 1]; if (!s) return ''; return s.textContent || ''; } catch { return ''; } }
+      function computeCurrentScriptHash(){ const txt = getModuleScriptText().replace(/INTEGRITY_SCRIPT_HASH\s*=\s*\d+/, ''); return djb2(txt); }
+      function showTamperOverlay(){ try { const el = document.getElementById('tamper-overlay'); if (el) el.classList.remove('hidden'); } catch {} }
+      function detectTamper(){ if (__tamperChecked) return __tamperDetected; __tamperChecked = true; const cur = computeCurrentScriptHash(); __tamperDetected = (cur !== INTEGRITY_SCRIPT_HASH); if (__tamperDetected) { window.__tampered = true; showTamperOverlay(); const btn = document.getElementById('tamper-reload'); if (btn) btn.addEventListener('click', ()=>location.reload()); }
+        return __tamperDetected; }
+             document.addEventListener('DOMContentLoaded', detectTamper);
+       detectTamper();
+ 
+       async function banForTamperIfNeeded(){ try { if (!window.__tampered) return; const user = auth.currentUser; if (!user) return; if (user?.email === ADMIN_EMAIL) return; const accountId = await getAccountId(); if (!accountId) return; await setDoc(doc(db,'users', accountId), { banned: true, banReason: 'tamper', bannedAt: serverTimestamp() }, { merge: true }); window.__banned = true; showTamperOverlay(); alert('Аккаунт заблокирован за модификацию клиента'); await signOutUser(); } catch {} }
+
+      const dom = {
+        tabs: document.querySelectorAll('.tab'), views: document.querySelectorAll('.view'), coins: document.getElementById('coins'), perClick: document.getElementById('perClick'), cps: document.getElementById('cps'), prestige: document.getElementById('prestige'), clicks: document.getElementById('clicks'), bigBtn: document.getElementById('big-click'), prestigeBtn: document.getElementById('prestige-btn'), boostBtn: document.getElementById('boost-btn'), boost3Btn: document.getElementById('boost3-btn'), boost5Btn: document.getElementById('boost5-btn'), saveBtn: document.getElementById('save-btn'), upgradeList: document.getElementById('upgrade-list'), autoList: document.getElementById('auto-list'), leaderboardList: document.getElementById('leaderboard-list'), leaderboardSegs: document.querySelectorAll('.segmented .seg'), playerName: document.getElementById('player-name'), toggleHaptics: document.getElementById('toggle-haptics'), toggleMotion: document.getElementById('toggle-motion'), toggleTheme: document.getElementById('toggle-theme'), toggleSfx: document.getElementById('toggle-sfx'), toggleOffline: document.getElementById('toggle-offline'), resetBtn: document.getElementById('reset-btn'), cloudStatus: document.getElementById('cloud-status'), saveLabel: document.getElementById('save-label'), userLabel: document.getElementById('user-label'), authSignout: document.getElementById('auth-signout'), prestigeProgress: document.getElementById('prestige-progress'), questsList: document.getElementById('quests-list'), achievementsList: document.getElementById('achievements-list'), dailyClaim: document.getElementById('daily-claim'), streak: document.getElementById('streak'), streakBadge: document.getElementById('streak-badge'), boostChip: document.getElementById('boost-chip'), comboChip: document.getElementById('combo-chip'), shardsChip: document.getElementById('shards-chip'), eventChip: document.getElementById('event-chip'), langSelect: document.getElementById('lang-select'), themeSelect: document.getElementById('theme-select'), importText: document.getElementById('import-text'), btnExport: document.getElementById('btn-export'), btnImport: document.getElementById('btn-import'), clickSound: document.getElementById('click-sound'), announcement: document.getElementById('announcement'), tabAdmin: document.getElementById('tab-admin'), adminEmail: document.getElementById('admin-email'), adminUid: document.getElementById('admin-uid'), adminAmount: document.getElementById('admin-amount'), adminGrant: document.getElementById('admin-grant'), adminResetLb: document.getElementById('admin-reset-lb'), adminResetLbw: document.getElementById('admin-reset-lbw'), adminRefreshUsers: document.getElementById('admin-refresh-users'), adminUsers: document.getElementById('admin-users'), adminAnnounce: document.getElementById('admin-announce'), adminAnnounceSave: document.getElementById('admin-announce-save'), adminAnnounceClear: document.getElementById('admin-announce-clear'), overlay: document.getElementById('auth-overlay'), authError: document.getElementById('auth-error'), formLogin: document.getElementById('form-login'), formRegister: document.getElementById('form-register'), linkToRegister: document.getElementById('link-to-register'), linkToLogin: document.getElementById('link-to-login'), linkReset: document.getElementById('link-reset'), loginEmail: document.getElementById('login-email'), loginPassword: document.getElementById('login-password'), regName: document.getElementById('reg-name'), regEmail: document.getElementById('reg-email'), regPassword: document.getElementById('reg-password'), btnLoginGuest: document.getElementById('btn-login-guest'), btnRegisterGuest: document.getElementById('btn-register-guest'), authTitle: document.getElementById('auth-title'), authDesc: document.getElementById('auth-desc'), profileOverlay: document.getElementById('profile-overlay'), acctId: document.getElementById('acct-id'), acctCopy: document.getElementById('acct-copy'), acctGenerate: document.getElementById('acct-generate'), acctClose: document.getElementById('acct-close'), keybindClick: document.getElementById('keybind-click'), promoCode: document.getElementById('promo-code'), promoRedeem: document.getElementById('promo-redeem'), snapshotSave: document.getElementById('snapshot-save'), snapshotRestore: document.getElementById('snapshot-restore'), adminAnnounceStart: document.getElementById('admin-announce-start'), adminAnnounceEnd: document.getElementById('admin-announce-end'), adminFindBtn: document.getElementById('admin-find'), adminUserInfo: document.getElementById('admin-user-info'), adminSetCoins: document.getElementById('admin-set-coins'), adminSetPrestige: document.getElementById('admin-set-prestige'), adminToggleBan: document.getElementById('admin-toggle-ban'), adminGrantType: document.getElementById('admin-grant-type'), adminGrantId: document.getElementById('admin-grant-id'), adminGrantCount: document.getElementById('admin-grant-count'), adminGrantItem: document.getElementById('admin-grant-item'), adminRemoveLb: document.getElementById('admin-remove-lb'), adminLoadSnaps: document.getElementById('admin-load-snaps'), adminPurgeOldLb: document.getElementById('admin-purge-oldlb'), adminPromoCode: document.getElementById('admin-promo-code'), adminPromoType: document.getElementById('admin-promo-type'), adminPromoAmount: document.getElementById('admin-promo-amount'), adminPromoMult: document.getElementById('admin-promo-mult'), adminPromoDuration: document.getElementById('admin-promo-duration'), adminPromoMax: document.getElementById('admin-promo-max'), adminPromoPerUser: document.getElementById('admin-promo-peruser'), adminPromoEnabled: document.getElementById('admin-promo-enabled'), adminPromoStart: document.getElementById('admin-promo-start'), adminPromoEnd: document.getElementById('admin-promo-end'), adminPromoSave: document.getElementById('admin-promo-save'), adminPromoDelete: document.getElementById('admin-promo-delete'), adminPromoLoad: document.getElementById('admin-promo-load'), adminPromoList: document.getElementById('admin-promo-list'), adminEventName: document.getElementById('admin-event-name'), adminEventMult: document.getElementById('admin-event-mult'), adminEventEnabled: document.getElementById('admin-event-enabled'), adminEventStart: document.getElementById('admin-event-start'), adminEventEnd: document.getElementById('admin-event-end'), adminEventSave: document.getElementById('admin-event-save'), adminEventClear: document.getElementById('admin-event-clear') };
+      dom.tamperOverlay = document.getElementById('tamper-overlay');
+      dom.tamperReload = document.getElementById('tamper-reload');
+
+      // Safe fallbacks for optional admin elements and controls
+      const __noop = () => {};
+      const __safeEl = { addEventListener: __noop };
+      ['adminFindBtn','adminApplyStats','adminToggleBan','adminGrantItem','adminRemoveLb'].forEach((k)=>{ if (!dom[k]) dom[k] = __safeEl; });
+
+      // Auth overlay helpers
+      function showAuthOverlay(mode = 'login'){
+        dom.overlay.classList.remove('hidden');
+        dom.authError.classList.add('hidden');
+        dom.authError.textContent = '';
+        if (mode === 'register'){
+          dom.formLogin.classList.add('hidden');
+          dom.formRegister.classList.remove('hidden');
+          dom.authTitle.textContent = 'Регистрация';
+          dom.authDesc.textContent = 'Создайте аккаунт для облачных сохранений.';
+        } else {
+          dom.formRegister.classList.add('hidden');
+          dom.formLogin.classList.remove('hidden');
+          dom.authTitle.textContent = 'Вход';
+          dom.authDesc.textContent = 'Добро пожаловать! Войдите или создайте аккаунт.';
+        }
+      }
+      function hideAuthOverlay(){ dom.overlay.classList.add('hidden'); }
+      function swapAuth(mode){ showAuthOverlay(mode); }
+      function mapError(code){
+        const dict = {
+          'auth/invalid-email': 'Неверный email',
+          'auth/user-not-found': 'Пользователь не найден',
+          'auth/wrong-password': 'Неверный пароль',
+          'auth/weak-password': 'Слабый пароль',
+          'auth/email-already-in-use': 'Email уже используется',
+          'auth/too-many-requests': 'Слишком много попыток. Попробуйте позже',
+          'auth/network-request-failed': 'Ошибка сети. Проверьте соединение',
+        };
+        return dict[code] || null;
+      }
+      function showAuthError(e){
+        const msg = mapError(e?.code) || e?.message || 'Ошибка';
+        dom.authError.textContent = msg;
+        dom.authError.classList.remove('hidden');
+      }
+
+      // Leaderboard default init
+      function bootBuildLeaderboardDefaults(){
+        try {
+          const btn = document.querySelector('.segmented .seg.active') || document.querySelector('.segmented .seg');
+          if (btn) switchLeaderboard(btn);
+        } catch {}
+      }
+
+      // Admin optional stubs
+      function adminFindUser(){}
+      function adminApplyUserStats(){}
+      function adminToggleUserBan(){}
+      function adminGrantInventory(){}
+      function adminRemoveFromLeaderboard(){}
+      function adminListSnapshots(){}
+      function adminPurgeOldLeaderboard(){}
+      function adminSavePromo(){}
+      function adminDeletePromo(){}
+      function adminListPromos(){}
+
+      // Global namespace for debugging/inspection
+      window.App = window.App || {};
+      window.App.dom = dom;
+      window.App.firebase = { app, auth, db };
+
+      const STORAGE_KEY = 'global-clicker:save-v3';
+      const TEXT = { ru: { game: 'Игра', shop: 'Магазин', top: 'Топ', quests: 'Квесты', achievements: 'Достижения', settings: 'Настройки', coins: 'Монеты', perClick: 'За клик', cps: 'в сек', prestige: 'Престиж', clicks: 'Клики', boost: 'Буст x2', prestigeBtn: 'Престиж', save: 'Сохранить', daily: 'Забрать ежедневную награду', }, en: { game: 'Game', shop: 'Shop', top: 'Top', quests: 'Quests', achievements: 'Achievements', settings: 'Settings', coins: 'Coins', perClick: 'Per click', cps: 'per sec', prestige: 'Prestige', clicks: 'Clicks', boost: 'Boost x2', prestigeBtn: 'Prestige', save: 'Save', daily: 'Claim daily reward', } };
+
+      // Removed leading plus in names/descriptions
+      const UPGRADE_CATALOG = [ { id: 'cursor', name: 'Курсор', desc: '1 к за клику', baseCost: 10, growth: 1.15, perLevel: 1 }, { id: 'tap_glove', name: 'Перчатка', desc: '5 к за клику', baseCost: 150, growth: 1.18, perLevel: 5 }, { id: 'tap_core', name: 'Ядро клика', desc: '25 к за клику', baseCost: 1200, growth: 1.2, perLevel: 25 }, { id: 'tap_reactor', name: 'Реактор', desc: '125 к за клику', baseCost: 5500, growth: 1.22, perLevel: 125 }, ];
+      const AUTO_CATALOG = [ { id: 'auto_mini', name: 'Мини-кликер', desc: '0.5/сек', baseCost: 50, growth: 1.15, cps: 0.5 }, { id: 'auto_cat', name: 'Кот-кликер', desc: '5/сек', baseCost: 500, growth: 1.18, cps: 5 }, { id: 'auto_robot', name: 'Робокликер', desc: '25/сек', baseCost: 5000, growth: 1.2, cps: 25 }, { id: 'auto_factory', name: 'Фабрика', desc: '120/сек', baseCost: 25000, growth: 1.22, cps: 120 }, ];
+
+      const ACHIEVEMENTS = [ { id: 'c1', name: 'Первые шаги', desc: 'Накопи 100 монет', test: s => s.coinsTotal >= 100, reward: 100 }, { id: 'c2', name: 'Клик-мастер', desc: 'Сделай 1000 кликов', test: s => s.totalClicks >= 1000, reward: 500 }, { id: 'c3', name: 'Инженер', desc: 'Купи 10 автокликеров', test: s => sumValues(s.autos) >= 10, reward: 1500 }, { id: 'c4', name: 'Престижно', desc: 'Совершить престиж', test: s => s.prestige >= 1, reward: 1000 }, { id: 'c5', name: 'Комбинация', desc: 'Достигни комбо x20', test: s => s.maxCombo >= 20, reward: 2000 }, { id: 'c6', name: 'Критоман', desc: 'Сделай 10 критов', test: s => s.critHits >= 10, reward: 2000 }, { id: 'c7', name: 'Миллионер', desc: 'Заработай 1M монет', test: s => s.coinsTotal >= 1_000_000, reward: 5000 }, { id: 'c8', name: 'Элита', desc: 'Престиж 5+', test: s => s.prestige >= 5, reward: 8000 }, ];
+      const DAILY_QUESTS = [ { id: 'q1', name: 'Кликни 250 раз', test: s => s.daily.clicks >= 250, reward: 250 }, { id: 'q2', name: 'Купи 3 улучшения', test: s => s.daily.upgrades >= 3, reward: 300 }, { id: 'q3', name: 'Заработай 5k монет', test: s => s.daily.earned >= 5000, reward: 400 }, ];
+
+      const PROMO_CODES = {
+        START1000: (s) => { s.coins += 1000; s.coinsTotal += 1000; },
+        BOOSTX3: (s) => { activateBoost(3, 60_000, 0); },
+        PRESTIGE1: (s) => { s.prestige += 1; computePerClick(); computePerSecond(); },
+      };
+
+             const gameState = {
+         coins: 0, coinsTotal: 0, perClick: 1, perSecond: 0, totalClicks: 0, prestige: 0,
+         upgrades: Object.fromEntries(UPGRADE_CATALOG.map(u => [u.id, 0])),
+         autos: Object.fromEntries(AUTO_CATALOG.map(a => [a.id, 0])),
+         lastTickMs: Date.now(), lastSaveMs: 0, lastSeenMs: Date.now(),
+         settings: { haptics: true, reduceMotion: false, themeDark: true, sfx: false, offline: true, lang: 'ru', theme: 'purple', keybindClick: 'Space' },
+         playerName: 'Гость', boost: { activeUntil: 0, cooldownUntil: 0, multiplier: 1 },
+         daily: { date: todayKey(), clicks: 0, upgrades: 0, earned: 0, claimed: false, streak: 0 },
+         achievements: {}, redeemedCodes: {},
+         combo: { count: 0, mult: 1, lastClickMs: 0 }, maxCombo: 1, critHits: 0,
+         admin: { isAdmin: false },
+         shards: 0,
+         event: { name: '', multiplier: 1, active: false }
+       };
+       window.App.state = gameState;
+
+      let cachedAccountId = null;
+
+      function todayKey() { const d = new Date(); return d.toISOString().slice(0,10); }
+      function sumValues(o){ return Object.values(o).reduce((a,b)=>a+(+b||0),0); }
+
+      function loadLocal() { try { const raw = localStorage.getItem(STORAGE_KEY); if (!raw) return; Object.assign(gameState, JSON.parse(raw)); } catch {} if (gameState.daily?.date !== todayKey()) { const yest = new Date(gameState.daily?.date || todayKey()); const diff = Math.round((Date.now() - yest.getTime())/86400000); const keepStreak = diff === 1; gameState.daily = { date: todayKey(), clicks:0, upgrades:0, earned:0, claimed:false, streak: keepStreak ? (gameState.daily.streak||0)+1 : 0 }; } }
+      function saveLocal() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ coins: gameState.coins, coinsTotal: gameState.coinsTotal, perClick: gameState.perClick, perSecond: gameState.perSecond, totalClicks: gameState.totalClicks, prestige: gameState.prestige, upgrades: gameState.upgrades, autos: gameState.autos, settings: gameState.settings, playerName: gameState.playerName, boost: gameState.boost, daily: gameState.daily, achievements: gameState.achievements, redeemedCodes: gameState.redeemedCodes, lastSeenMs: Date.now(), combo: gameState.combo, maxCombo: gameState.maxCombo, critHits: gameState.critHits, shards: gameState.shards, event: gameState.event })); } catch (e) { console.warn('Local storage disabled; using memory only.'); } }
+
+      function format(num) { if (num < 1000) return Math.floor(num).toString(); const suffix = ['k', 'M', 'B', 'T', 'Q']; let idx = -1; while (num >= 1000 && idx < suffix.length - 1) { num /= 1000; idx++; } return num.toFixed(2) + suffix[idx]; }
+      function artifactMultiplier(){ return 1 + (gameState.shards||0) * 0.002; }
+      function globalMultiplier(){ return (gameState.boost?.multiplier||1) * (gameState.event?.multiplier||1) * artifactMultiplier(); }
+      function computePerClick() { let base = 1 + gameState.prestige; for (const u of UPGRADE_CATALOG) base += gameState.upgrades[u.id] * u.perLevel; base *= globalMultiplier(); gameState.perClick = base; }
+      function computePerSecond() { let cps = 0; for (const a of AUTO_CATALOG) cps += gameState.autos[a.id] * a.cps; cps *= (1 + gameState.prestige * 0.05); cps *= globalMultiplier(); gameState.perSecond = cps; }
+      function getUpgradeCost(u) { const level = gameState.upgrades[u.id]; return Math.floor(u.baseCost * Math.pow(u.growth, level)); }
+      function getAutoCost(a) { const owned = gameState.autos[a.id]; return Math.floor(a.baseCost * Math.pow(a.growth, owned)); }
+
+      function renderStats() { dom.coins.textContent = format(gameState.coins); dom.perClick.textContent = format(gameState.perClick); dom.cps.textContent = format(gameState.perSecond); dom.prestige.textContent = format(gameState.prestige); dom.clicks.textContent = format(gameState.totalClicks); const progress = Math.max(0, Math.min(100, (gameState.coins / 1000) * 100)); dom.prestigeProgress.style.width = progress + '%'; renderBoostChip(); renderComboChip(); renderShardsChip(); }
+      function renderBoostChip() { const now = Date.now(); if (gameState.boost.activeUntil > now) { dom.boostChip.classList.remove('hidden'); const rem = Math.max(0, Math.floor((gameState.boost.activeUntil - now)/1000)); const m = String(Math.floor(rem/60)).padStart(2,'0'); const s = String(rem%60).padStart(2,'0'); dom.boostChip.textContent = `x${gameState.boost.multiplier} ${m}:${s}`; } else { dom.boostChip.classList.add('hidden'); } }
+      function renderComboChip(){ if (gameState.combo.mult > 1) { dom.comboChip.classList.remove('hidden'); dom.comboChip.textContent = `Combo x${gameState.combo.mult}`; } else dom.comboChip.classList.add('hidden'); }
+      function renderShardsChip(){ if ((gameState.shards||0) > 0){ dom.shardsChip.classList.remove('hidden'); dom.shardsChip.textContent = `Shards ${gameState.shards}`; } else dom.shardsChip.classList.add('hidden'); }
+
+      function renderShop() { dom.upgradeList.innerHTML = ''; for (const u of UPGRADE_CATALOG) { const li = document.createElement('li'); li.className = 'item'; const cost = getUpgradeCost(u); li.innerHTML = `<div class="meta"><span class="name">${u.name} <small>ур. ${gameState.upgrades[u.id]}</small></span><span class="desc">${u.desc}</span></div><div class="cta"><span class="cost">${format(cost)}</span><button class="btn" ${gameState.coins < cost ? 'disabled' : ''}>Купить</button></div>`; li.querySelector('button').addEventListener('click', () => buyUpgrade(u)); dom.upgradeList.appendChild(li); } dom.autoList.innerHTML = ''; for (const a of AUTO_CATALOG) { const li = document.createElement('li'); li.className = 'item'; const cost = getAutoCost(a); li.innerHTML = `<div class="meta"><span class="name">${a.name} <small>x ${gameState.autos[a.id]}</small></span><span class="desc">${a.desc}</span></div><div class="cta"><span class="cost">${format(cost)}</span><button class="btn" ${gameState.coins < cost ? 'disabled' : ''}>Купить</button></div>`; li.querySelector('button').addEventListener('click', () => buyAuto(a)); dom.autoList.appendChild(li); } }
+
+      const CRIT = { chance: 0.1, mult: 5 };
+      function clickOnce() { if (window.__banned || window.__tampered) return; const now = Date.now(); if (now - gameState.combo.lastClickMs <= 1500) gameState.combo.count++; else gameState.combo.count = 1; gameState.combo.lastClickMs = now; gameState.combo.mult = Math.min(10, 1 + Math.floor(gameState.combo.count / 10)); gameState.maxCombo = Math.max(gameState.maxCombo, gameState.combo.mult); const isCrit = Math.random() < CRIT.chance; if (isCrit) gameState.critHits++; const critMult = isCrit ? CRIT.mult : 1; const gain = gameState.perClick * gameState.combo.mult * critMult; gameState.coins += gain; gameState.coinsTotal += gain; gameState.totalClicks += 1; gameState.daily.clicks += 1; gameState.daily.earned += gain; // shard drop
+        if (Math.random() < 0.0005) { gameState.shards += 1; renderShardsChip(); const old = dom.bigBtn.textContent; dom.bigBtn.textContent = 'SHARD!'; setTimeout(()=>dom.bigBtn.textContent=old, 250); }
+        haptics(isCrit ? 30 : 10); sfx(); if (isCrit) { const oldText = dom.bigBtn.textContent; dom.bigBtn.textContent = 'КРИТ!'; setTimeout(()=>{ dom.bigBtn.textContent = oldText; }, 180); } checkAchievements(); renderStats(); }
+      function haptics(ms=10){ if (!gameState.settings.haptics) return; if (navigator.vibrate) navigator.vibrate(ms); }
+      function sfx(){ if (!gameState.settings.sfx) return; const a = dom.clickSound; a.currentTime = 0; a.play().catch(()=>{}); }
+      function decayCombo(){ const now = Date.now(); if (now - gameState.combo.lastClickMs > 1500) { gameState.combo.count = 0; gameState.combo.mult = 1; } }
+
+      function buyUpgrade(u) { const cost = getUpgradeCost(u); if (gameState.coins < cost) return; gameState.coins -= cost; gameState.upgrades[u.id]++; gameState.daily.upgrades++; computePerClick(); renderStats(); renderShop(); checkAchievements(); }
+      function buyAuto(a) { const cost = getAutoCost(a); if (gameState.coins < cost) return; gameState.coins -= cost; gameState.autos[a.id]++; computePerSecond(); renderStats(); renderShop(); checkAchievements(); }
+
+      function canPrestige(){ return gameState.coins >= 1000; }
+      function prestige() { if (!canPrestige()) return; const gained = Math.floor(Math.sqrt(gameState.coins / 1000)); if (gained <= 0) return; gameState.prestige += gained; gameState.coins = 0; gameState.upgrades = Object.fromEntries(UPGRADE_CATALOG.map(u => [u.id, 0])); gameState.autos = Object.fromEntries(AUTO_CATALOG.map(a => [a.id, 0])); computePerClick(); computePerSecond(); renderStats(); renderShop(); checkAchievements(); }
+
+      function activateBoost(mult, durMs, cdMs){ const now = Date.now(); if (now < gameState.boost.cooldownUntil) return; gameState.boost.multiplier = mult; gameState.boost.activeUntil = now + durMs; gameState.boost.cooldownUntil = now + cdMs; computePerClick(); computePerSecond(); renderStats(); }
+      function boostTick(){ const now = Date.now(); if (now >= gameState.boost.activeUntil && gameState.boost.multiplier !== 1) { gameState.boost.multiplier = 1; computePerClick(); computePerSecond(); } }
+
+      let prevGamepadPressed = false;
+      function loop() { const now = Date.now(); const dt = Math.min(1000, now - gameState.lastTickMs) / 1000; gameState.lastTickMs = now; if (gameState.perSecond > 0) { const inc = gameState.perSecond * dt; gameState.coins += inc; gameState.coinsTotal += inc; gameState.daily.earned += inc; } decayCombo(); boostTick(); renderBoostChip(); renderComboChip(); renderStats(); scheduleAutosave(now); try { const pads = navigator.getGamepads ? navigator.getGamepads() : []; const p0 = pads && pads[0]; const pressed = !!(p0 && p0.buttons && p0.buttons[0] && p0.buttons[0].pressed); if (pressed && !prevGamepadPressed) clickOnce(); prevGamepadPressed = pressed; } catch {} requestAnimationFrame(loop); }
+
+      function scheduleAutosave(now){ if (now - gameState.lastSaveMs < 15_000) return; gameState.lastSaveMs = now; persist(); }
+
+      async function getAccountId(){ if (cachedAccountId) return cachedAccountId; const user = auth.currentUser; if (!user) return null; const ref = doc(db, 'idmap', user.uid); const snap = await getDoc(ref); cachedAccountId = (snap.exists() && snap.data().appId) ? String(snap.data().appId) : user.uid; return cachedAccountId; }
+      async function setAccountId(newId){ const user = auth.currentUser; if (!user) throw new Error('Нет пользователя'); await setDoc(doc(db,'idmap', user.uid), { appId: newId, updatedAt: serverTimestamp() }, { merge: true }); cachedAccountId = newId; return newId; }
+      async function signOutUser(){ await signOut(auth); cachedAccountId = null; }
+      async function updateDisplayName(displayName){ if (!auth.currentUser) return; await updateProfile(auth.currentUser, { displayName }); }
+
+      async function loadCloudForCurrentAccount(){ const accountId = await getAccountId(); if (!accountId) return null; const ref = doc(db, 'users', accountId); const snap = await getDoc(ref); return snap.exists()? snap.data(): null; }
+      async function saveCloudForCurrentAccount(progress){ const user = auth.currentUser; const accountId = await getAccountId(); if (!user || !accountId) return; const ref = doc(db, 'users', accountId); await setDoc(ref, { ...progress, email: user?.email || null, name: gameState.playerName || user.displayName || 'Гость', updatedAt: serverTimestamp() }, { merge: true }); }
+             async function submitLeaderboardForCurrentAccount(){ if (window.__tampered || window.__banned) return; const accountId = await getAccountId(); const user = auth.currentUser; if (!accountId || !user) return; const payload = { uid: accountId, name: gameState.playerName || user.displayName || 'Гость', coins: Math.floor(gameState.coins), clicks: Math.floor(gameState.totalClicks), prestige: gameState.prestige, maxCombo: gameState.maxCombo, updatedAt: serverTimestamp() }; await setDoc(doc(db, 'leaderboard', accountId), payload, { merge: true }); await setDoc(doc(db, 'leaderboard_weekly', accountId), payload, { merge: true }); }
+
+      function subscribeLeaderboard(kind, callback, top=100){ const qy = query(collection(db, 'leaderboard'), orderBy(kind, 'desc'), limit(top)); return onSnapshot(qy, (snap)=>{ const items=[]; snap.forEach(d=>items.push(d.data())); callback(items); }); }
+      function subscribeAnnouncement(){ const ref = doc(db, 'meta', 'app'); return onSnapshot(ref, (snap)=>{ const data = snap.exists()? snap.data(): null; // announcement
+        const text = data?.announcement?.trim(); const start = data?.announcementStart ? new Date(data.announcementStart).getTime() : null; const end = data?.announcementEnd ? new Date(data.announcementEnd).getTime() : null; const now = Date.now(); const inWindow = (!start || now>=start) && (!end || now<=end); if (text && inWindow) { dom.announcement.textContent = text; dom.announcement.classList.remove('hidden'); } else { dom.announcement.classList.add('hidden'); }
+        // event
+        const eEnabled = !!data?.eventEnabled; const eStart = data?.eventStart ? new Date(data.eventStart).getTime(): null; const eEnd = data?.eventEnd ? new Date(data.eventEnd).getTime(): null; const eWindow = (!eStart || now>=eStart) && (!eEnd || now<=eEnd);
+        if (eEnabled && eWindow){ gameState.event.name = data?.eventName || 'Событие'; gameState.event.multiplier = Math.max(1, Number(data?.eventMultiplier||1)); gameState.event.active = true; dom.eventChip.textContent = `${gameState.event.name} x${gameState.event.multiplier}`; dom.eventChip.classList.remove('hidden'); computePerClick(); computePerSecond(); renderStats(); }
+        else { gameState.event = { name:'', multiplier:1, active:false }; dom.eventChip.classList.add('hidden'); computePerClick(); computePerSecond(); renderStats(); }
+      }); }
+
+      async function migrateAccountId(newId){ const user = auth.currentUser; if (!user) throw new Error('Нет пользователя'); const oldId = await getAccountId(); if (oldId === newId) return oldId; const oldUserRef = doc(db,'users', oldId); const oldLbRef = doc(db,'leaderboard', oldId); const [oldUserSnap, oldLbSnap] = await Promise.all([getDoc(oldUserRef), getDoc(oldLbRef)]); await setDoc(doc(db,'users', newId), { ...(oldUserSnap.exists()? oldUserSnap.data(): {}), name: gameState.playerName || user.displayName || 'Гость', email: user.email || null, migratedFrom: oldId, updatedAt: serverTimestamp() }, { merge: true }); if (oldLbSnap.exists()){ const d = oldLbSnap.data(); await setDoc(doc(db,'leaderboard', newId), { ...d, uid: newId, name: gameState.playerName || d.name || 'Гость', updatedAt: serverTimestamp() }, { merge: true }); } await setAccountId(newId); try { await deleteDoc(oldLbRef); } catch {} return newId; }
+
+             async function persist(){ saveLocal(); dom.saveLabel.textContent = 'Сохранение: локально'; if (window.__tampered || window.__banned) return; try { const user = auth.currentUser; if (user) { await saveCloudForCurrentAccount(exportPayload()); dom.saveLabel.textContent = 'Сохранение: облако'; dom.cloudStatus.textContent = '☁ online'; } } catch { dom.cloudStatus.textContent = '⛅ offline'; } }
+
+      function setAdminUI(isAdmin, email){ gameState.admin.isAdmin = !!isAdmin; dom.tabAdmin.hidden = !isAdmin; dom.adminEmail.textContent = isAdmin ? (email || ADMIN_EMAIL) : '—'; }
+
+      async function adminGrantCoins(){ const uid = dom.adminUid.value.trim(); const amount = Number(dom.adminAmount.value || 0); if (!uid || !amount) return; const ref = doc(db, 'users', uid); const snap = await getDoc(ref); const base = (snap.exists()? (snap.data().coins||0) : 0); await setDoc(ref, { coins: Math.max(0, Math.floor(base + amount)) }, { merge: true }); alert('Готово'); }
+      async function adminResetLeaderboard(){ if (!confirm('Очистить таблицу лидеров?')) return; const coll = collection(db, 'leaderboard'); const qs = await getDocs(coll); const ops = []; qs.forEach(d => ops.push(deleteDoc(doc(db, 'leaderboard', d.id)))); await Promise.all(ops); alert('Таблица лидеров очищена'); }
+      async function adminRefreshUsers(){ const qy = query(collection(db, 'users'), orderBy('coins','desc'), limit(50)); const qs = await getDocs(qy); dom.adminUsers.innerHTML=''; let idx = 1; qs.forEach(d => { const u = d.data(); const li = document.createElement('li'); li.innerHTML = `<span>${idx++}. ${escapeHtml(u.name || u.playerName || u.email || d.id)}</span><strong>${format(u.coins||0)}</strong>`; dom.adminUsers.appendChild(li); }); }
+      async function adminSaveAnnouncement(){ const text = dom.adminAnnounce.value || ''; await setDoc(doc(db,'meta','app'), { announcement: text, announcementStart: dom.adminAnnounceStart.value||null, announcementEnd: dom.adminAnnounceEnd.value||null, updatedAt: serverTimestamp() }, { merge: true }); alert('Сохранено'); }
+      async function adminClearAnnouncement(){ await setDoc(doc(db,'meta','app'), { announcement: '' }, { merge: true }); dom.adminAnnounce.value=''; alert('Очищено'); }
+      async function adminSaveEvent(){ const name=(dom.adminEventName.value||'').trim(); const mult=Math.max(1, Number(dom.adminEventMult.value||1)); const enabled=(dom.adminEventEnabled.value==='true'); const start=dom.adminEventStart.value||null; const end=dom.adminEventEnd.value||null; await setDoc(doc(db,'meta','app'), { eventName: name, eventMultiplier: mult, eventEnabled: enabled, eventStart: start, eventEnd: end, updatedAt: serverTimestamp() }, { merge: true }); alert('Ивент сохранён'); }
+      async function adminClearEvent(){ await setDoc(doc(db,'meta','app'), { eventEnabled: false }, { merge: true }); alert('Ивент отключён'); }
+      async function adminResetWeeklyLeaderboard(){ if (!confirm('Очистить недельный лидерборд?')) return; const coll = collection(db, 'leaderboard_weekly'); const qs = await getDocs(coll); const ops = []; qs.forEach(d => ops.push(deleteDoc(doc(db, 'leaderboard_weekly', d.id)))); await Promise.all(ops); alert('Недельный лидерборд очищен'); }
+
+      function bindUI(){
+        dom.tabs.forEach(btn => btn.addEventListener('click', () => switchView(btn)));
+        dom.bigBtn.addEventListener('click', clickOnce);
+        window.addEventListener('keydown', (e)=>{ if (e.code === (gameState.settings.keybindClick || 'Space')) { e.preventDefault(); clickOnce(); }});
+        dom.prestigeBtn.addEventListener('click', ()=>{ prestige(); persist(); });
+        dom.boostBtn.addEventListener('click', ()=>activateBoost(2, 30_000, 120_000)); dom.boost3Btn.addEventListener('click', ()=>activateBoost(3, 15_000, 180_000)); dom.boost5Btn.addEventListener('click', ()=>activateBoost(5, 5_000, 300_000));
+        dom.saveBtn.addEventListener('click', persist);
+        dom.playerName.addEventListener('change', async ()=>{ const name = dom.playerName.value.trim().slice(0,24)||'Гость'; gameState.playerName = name; dom.userLabel.textContent = name; try{ await updateDisplayName(name);}catch{} });
+        dom.toggleHaptics.addEventListener('change', ()=>{ gameState.settings.haptics = dom.toggleHaptics.checked; saveLocal(); }); dom.toggleMotion.addEventListener('change', ()=>{ gameState.settings.reduceMotion = dom.toggleMotion.checked; saveLocal(); }); dom.toggleTheme.addEventListener('change', ()=>toggleTheme(dom.toggleTheme.checked)); dom.toggleSfx.addEventListener('change', ()=>{ gameState.settings.sfx = dom.toggleSfx.checked; saveLocal(); }); dom.toggleOffline.addEventListener('change', ()=>{ gameState.settings.offline = dom.toggleOffline.checked; saveLocal(); }); dom.themeSelect.addEventListener('change', ()=>{ gameState.settings.theme = dom.themeSelect.value; applyThemePalette(); saveLocal(); });
+        dom.keybindClick.addEventListener('change', ()=>{ gameState.settings.keybindClick = dom.keybindClick.value; saveLocal(); });
+        dom.resetBtn.addEventListener('click', ()=>{ if (confirm('Сбросить прогресс?')) { localStorage.removeItem(STORAGE_KEY); location.reload(); }});
+        dom.leaderboardSegs.forEach(btn => btn.addEventListener('click', ()=>switchLeaderboard(btn)));
+        dom.dailyClaim.addEventListener('click', claimDaily);
+        dom.langSelect.addEventListener('change', ()=>{ gameState.settings.lang = dom.langSelect.value; applyLang(); saveLocal(); });
+        dom.btnExport.addEventListener('click', ()=>{ dom.importText.value = btoa(unescape(encodeURIComponent(JSON.stringify(exportPayload())))); dom.importText.select(); document.execCommand('copy'); alert('Экспорт скопирован.'); });
+        dom.btnImport.addEventListener('click', ()=>{ try { const data = JSON.parse(decodeURIComponent(escape(atob(dom.importText.value.trim())))); importPayload(data); saveLocal(); location.reload(); } catch(e){ alert('Неверные данные импорта'); } });
+        dom.snapshotSave.addEventListener('click', saveSnapshot);
+        dom.snapshotRestore.addEventListener('click', restoreLastSnapshot);
+        dom.promoRedeem.addEventListener('click', redeemPromo);
+        window.addEventListener('visibilitychange', ()=>{ if (document.hidden) persist(); }); window.addEventListener('beforeunload', ()=>{ persist(); });
+
+        dom.linkToRegister.addEventListener('click', ()=>swapAuth('register')); dom.linkToLogin.addEventListener('click', ()=>swapAuth('login'));
+        dom.formLogin.addEventListener('submit', async (e)=>{ e.preventDefault(); await handleLogin(); }); dom.formRegister.addEventListener('submit', async (e)=>{ e.preventDefault(); await handleRegister(); });
+                 dom.btnLoginGuest.addEventListener('click', async ()=>{ try { await signInAnonymously(auth); await banForTamperIfNeeded(); if (!window.__banned) afterAuth({ showProfile: true }); } catch(e){ showAuthError(e); } }); dom.btnRegisterGuest.addEventListener('click', async ()=>{ try { await signInAnonymously(auth); await banForTamperIfNeeded(); if (!window.__banned) afterAuth({ showProfile: true }); } catch(e){ showAuthError(e); } });
+        dom.linkReset.addEventListener('click', async ()=>{ const email = prompt('Введите email для восстановления'); if (!email) return; try { await sendPasswordResetEmail(auth, email); alert('Письмо отправлено'); } catch(e){ alert(mapError(e.code)||'Ошибка'); } });
+
+        dom.authSignout.addEventListener('click', async ()=>{ await signOutUser(); dom.authSignout.hidden = true; dom.cloudStatus.textContent = '⛅ offline'; cachedAccountId = null; showAuthOverlay('login'); setAdminUI(false); if (unsubAnnouncement) { unsubAnnouncement(); unsubAnnouncement = null; } });
+
+        dom.acctCopy.addEventListener('click', ()=>{ dom.acctId.select(); document.execCommand('copy'); });
+        dom.acctClose.addEventListener('click', ()=>{ dom.profileOverlay.classList.add('hidden'); });
+        dom.acctGenerate.addEventListener('click', async ()=>{ if (!confirm('Сгенерировать новый ID и перенести данные?')) return; const newId = generateId(); try { await migrateAccountId(newId); dom.acctId.value = newId; alert('Новый ID установлен'); } catch(e){ alert('Ошибка: ' + (e.message||e)); } });
+
+        dom.adminGrant.addEventListener('click', adminGrantCoins); dom.adminResetLb.addEventListener('click', adminResetLeaderboard); dom.adminResetLbw.addEventListener('click', adminResetWeeklyLeaderboard); dom.adminRefreshUsers.addEventListener('click', adminRefreshUsers); dom.adminAnnounceSave.addEventListener('click', adminSaveAnnouncement); dom.adminAnnounceClear.addEventListener('click', adminClearAnnouncement); dom.adminEventSave.addEventListener('click', adminSaveEvent); dom.adminEventClear.addEventListener('click', adminClearEvent); dom.adminFindBtn.addEventListener('click', adminFindUser); dom.adminApplyStats.addEventListener('click', adminApplyUserStats); dom.adminToggleBan.addEventListener('click', adminToggleUserBan); dom.adminGrantItem.addEventListener('click', adminGrantInventory); dom.adminRemoveLb.addEventListener('click', adminRemoveFromLeaderboard); dom.adminLoadSnaps.addEventListener('click', adminListSnapshots); dom.adminPurgeOldLb.addEventListener('click', adminPurgeOldLeaderboard); dom.adminPromoSave.addEventListener('click', adminSavePromo); dom.adminPromoDelete.addEventListener('click', adminDeletePromo); dom.adminPromoLoad.addEventListener('click', adminListPromos);
+      }
+
+      function exportPayload(){ return { coins: Math.floor(gameState.coins), coinsTotal: Math.floor(gameState.coinsTotal), perClick: gameState.perClick, perSecond: gameState.perSecond, totalClicks: Math.floor(gameState.totalClicks), prestige: gameState.prestige, upgrades: gameState.upgrades, autos: gameState.autos, playerName: gameState.playerName, settings: gameState.settings, achievements: gameState.achievements, redeemedCodes: gameState.redeemedCodes, daily: gameState.daily, combo: gameState.combo, maxCombo: gameState.maxCombo, critHits: gameState.critHits, shards: gameState.shards, event: gameState.event }; }
+      function importPayload(p){ Object.assign(gameState, { ...gameState, ...p }); computePerClick(); computePerSecond(); }
+
+      function switchView(btn){ dom.tabs.forEach(b=>b.classList.remove('active')); btn.classList.add('active'); const target = btn.getAttribute('data-target'); dom.views.forEach(v=>{ const is = v.getAttribute('data-view')===target; v.toggleAttribute('hidden', !is); v.classList.toggle('active', is); }); }
+      function switchLeaderboard(btn){ document.querySelectorAll('.segmented .seg').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); const kind = btn.getAttribute('data-kind'); const source = btn.getAttribute('data-source')||'all'; if (window.__lbUnsub) { try { window.__lbUnsub(); } catch{} } window.__lbUnsub = buildLeaderboard(kind, source); }
+
+      function toggleTheme(dark){ gameState.settings.themeDark = dark; if (dark) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); saveLocal(); }
+      function applyThemePalette(){ const t = gameState.settings.theme || 'purple'; const root = document.documentElement; const palettes = { purple: ['#7c3aed', '#06b6d4'], emerald: ['#10b981', '#f59e0b'], rose: ['#e11d48', '#22d3ee'] }; const [p1, p2] = palettes[t] || palettes.purple; root.style.setProperty('--primary', p1); root.style.setProperty('--primary-2', p2); }
+
+      function buildShop(){ renderShop(); }
+      function buildLeaderboard(kind='coins', source='all'){ const coll = (source==='weekly')? 'leaderboard_weekly':'leaderboard'; const qy = query(collection(db, coll), orderBy(kind, 'desc'), limit(100)); return onSnapshot(qy, (snap)=>{ dom.leaderboardList.innerHTML=''; let idx=0; snap.forEach(d=>{ const it=d.data(); const li=document.createElement('li'); li.innerHTML = `<span>${++idx}. ${escapeHtml(it.name||'Гость')}</span><strong>${format(it[kind]||0)}</strong>`; dom.leaderboardList.appendChild(li); }); }); }
+      function buildQuests(){ dom.questsList.innerHTML=''; for (const q of DAILY_QUESTS){ const li=document.createElement('li'); li.className='item'; const done = q.test({ daily: gameState.daily }); li.innerHTML = `<div class="meta"><span class="name">${q.name}</span><span class="desc">Награда: ${format(q.reward)}</span></div><div class="cta"><span class="badge ${done?'':''}">${done?'Готово':'В процессе'}</span></div>`; dom.questsList.appendChild(li);} dom.streak.textContent = String(gameState.daily.streak||0); }
+      function claimDaily(){ if (gameState.daily.claimed) { alert('Награда уже получена'); return; } gameState.coins += 500 + gameState.daily.streak*50; gameState.daily.claimed = true; renderStats(); saveLocal(); }
+      function buildAchievements(){ dom.achievementsList.innerHTML=''; for (const a of ACHIEVEMENTS){ const unlocked = !!gameState.achievements[a.id]; const li=document.createElement('li'); li.className='item'; li.innerHTML = `<div class="meta"><span class="name">${a.name}</span><span class="desc">${a.desc}</span></div><div class="cta"><span class="badge" style="background:${unlocked?'rgba(16,185,129,.2)':'rgba(255,255,255,.08)'}">${unlocked?'Открыто':'Скрыто'}</span></div>`; dom.achievementsList.appendChild(li);} }
+      function checkAchievements(){ let changed=false; for (const a of ACHIEVEMENTS){ if (!gameState.achievements[a.id] && a.test(gameState)){ gameState.achievements[a.id] = true; gameState.coins += a.reward; changed = true; }} if (changed){ renderStats(); saveLocal(); } }
+
+      function applyLang(){ const L = TEXT[gameState.settings.lang] || TEXT.ru; const tabs = [L.game,L.shop,L.top,L.quests,L.achievements,L.settings,'Админ']; const tabEls = document.querySelectorAll('.tabs .tab'); tabEls.forEach((b,i)=>{ if (i < tabs.length) b.textContent = tabs[i]; }); const lbls = document.querySelectorAll('#view-game .stat .label'); lbls[0].textContent=L.coins; lbls[1].textContent=L.perClick; lbls[2].textContent=L.cps; lbls[3].textContent=L.prestige; lbls[4].textContent=L.clicks; dom.boostBtn.textContent=L.boost; dom.prestigeBtn.textContent=L.prestigeBtn; dom.saveBtn.textContent=L.save; dom.dailyClaim.textContent=L.daily; }
+
+      function escapeHtml(s){ return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
+      function offlineGrant(){ if (!gameState.settings.offline) return; const now = Date.now(); const diffMs = now - (gameState.lastSeenMs || now); const hours = Math.min(8, diffMs/3600000); if (hours > 0) { const gain = gameState.perSecond * 3600 * hours; gameState.coins += gain; gameState.coinsTotal += gain; gameState.daily.earned += gain; } }
+
+      let unsubAnnouncement;
+      async function initialCloudSync(){ const user = auth.currentUser; if (!user) return; const cloud = await loadCloudForCurrentAccount(); if (cloud){ if (cloud.banned){ window.__banned = true; alert('Аккаунт заблокирован'); } importPayload(cloud); dom.playerName.value = gameState.playerName; dom.userLabel.textContent = gameState.playerName; renderStats(); renderShop(); buildQuests(); buildAchievements(); } if (unsubAnnouncement) unsubAnnouncement(); unsubAnnouncement = subscribeAnnouncement(); const acct = await getAccountId(); dom.acctId.value = acct || user.uid; dom.keybindClick.value = gameState.settings.keybindClick || 'Space'; }
+
+      function generateId(){ const rand = Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 10); const ts = Date.now().toString(36).slice(-6); return (rand + ts).slice(0, 16); }
+
+      async function handleRegister(){ try { const email = dom.regEmail.value.trim(); const pass = dom.regPassword.value; const name = dom.regName.value.trim().slice(0,24) || 'Гость'; const cred = await createUserWithEmailAndPassword(auth, email, pass); try{ await updateProfile(cred.user, { displayName: name }); }catch{} gameState.playerName = name; dom.playerName.value = name; await banForTamperIfNeeded(); if (!window.__banned) afterAuth({ showProfile: true }); } catch(e){ showAuthError(e); } }
+      async function handleLogin(){ try { const email = dom.loginEmail.value.trim(); const pass = dom.loginPassword.value; await signInWithEmailAndPassword(auth, email, pass); await banForTamperIfNeeded(); if (!window.__banned) afterAuth({ showProfile: false }); } catch(e){ showAuthError(e); } }
+
+      async function afterAuth(opts={}){ hideAuthOverlay(); dom.authSignout.hidden = false; dom.cloudStatus.textContent = '☁ online'; const user = auth.currentUser; const name = (user && (user.displayName || gameState.playerName)) || 'Гость'; dom.userLabel.textContent = name; gameState.playerName = name; dom.playerName.value = name; setAdminUI(user?.email === ADMIN_EMAIL, user?.email || undefined); await initialCloudSync(); startLeaderboardSubmit(); if (opts.showProfile) { const acct = await getAccountId(); dom.acctId.value = acct || user.uid; dom.profileOverlay.classList.remove('hidden'); } }
+
+      function startLeaderboardSubmit(){ if (window.__lbInterval) return; window.__lbInterval = setInterval(async ()=>{ if (auth.currentUser) { await submitLeaderboardForCurrentAccount(); } }, 10_000); }
+
+      async function saveSnapshot(){ try { const accountId = await getAccountId(); if (!accountId) return; const ts = Date.now(); await setDoc(doc(db, 'users', accountId, 'snapshots', String(ts)), { ts, payload: exportPayload(), createdAt: serverTimestamp() }); // keep last 3
+        const qs = await getDocs(query(collection(db,'users',accountId,'snapshots'), orderBy('ts','desc'))); let i=0; for (const d of qs.docs){ i++; if (i>3) await deleteDoc(doc(db,'users',accountId,'snapshots', d.id)); }
+        alert('Снапшот сохранён'); } catch(e){ alert('Ошибка снапшота'); } }
+      async function restoreLastSnapshot(){ try { const accountId = await getAccountId(); if (!accountId) return; const qs = await getDocs(query(collection(db,'users',accountId,'snapshots'), orderBy('ts','desc'), limit(1))); if (qs.empty) { alert('Снапшотов нет'); return; } const snap = qs.docs[0].data(); if (snap?.payload){ importPayload(snap.payload); renderStats(); renderShop(); saveLocal(); await saveCloudForCurrentAccount(exportPayload()); alert('Восстановлено'); } } catch(e){ alert('Ошибка восстановления'); } }
+
+      function redeemPromo(){ const raw = (dom.promoCode.value || '').trim().toUpperCase(); if (!raw) return; if (gameState.redeemedCodes[raw]) { alert('Код уже активирован'); return; } const fn = PROMO_CODES[raw]; if (!fn) { alert('Неверный код'); return; } fn(gameState); gameState.redeemedCodes[raw] = true; renderStats(); renderShop(); saveLocal(); persist(); alert('Код активирован'); }
+
+      async function boot(){
+        loadLocal(); computePerClick(); computePerSecond(); offlineGrant(); dom.playerName.value = gameState.playerName; dom.userLabel.textContent = gameState.playerName; dom.toggleHaptics.checked = !!gameState.settings.haptics; dom.toggleMotion.checked = !!gameState.settings.reduceMotion; dom.toggleTheme.checked = !!gameState.settings.themeDark; dom.toggleSfx.checked = !!gameState.settings.sfx; dom.toggleOffline.checked = !!gameState.settings.offline; dom.langSelect.value = gameState.settings.lang || 'ru'; dom.themeSelect.value = gameState.settings.theme || 'purple'; dom.keybindClick.value = gameState.settings.keybindClick || 'Space'; applyLang(); toggleTheme(!!gameState.settings.themeDark); applyThemePalette(); renderStats(); bindUI(); buildShop(); loop(); bootBuildLeaderboardDefaults(); buildQuests(); buildAchievements(); checkAchievements();
+        onAuthStateChanged(auth, async (user)=>{ if (user) { dom.authSignout.hidden = false; dom.cloudStatus.textContent = '☁ online'; hideAuthOverlay(); setAdminUI(user.email === ADMIN_EMAIL, user.email); await banForTamperIfNeeded(); if (window.__banned) return; startLeaderboardSubmit(); initialCloudSync(); if (user.displayName){ dom.userLabel.textContent = user.displayName; dom.playerName.value = user.displayName; gameState.playerName = user.displayName; } } else { setAdminUI(false); showAuthOverlay('login'); if (unsubAnnouncement) { unsubAnnouncement(); unsubAnnouncement = null; } cachedAccountId = null; }});
+      }
+
+      boot();
+    </script>
+  </body>
+</html>
