@@ -299,14 +299,14 @@
       import { getDatabase, ref as dbRef, set as dbSet, update as dbUpdate, get as dbGet, child as dbChild, serverTimestamp as rtdbServerTimestamp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js';
 
       const ADMIN_EMAIL = '100500gibi@gmail.com';
-      const firebaseConfig = { apiKey: "AIzaSyCivFOydMEfdAhfLtZ6REK58HsnvhNe1MY", authDomain: "clicker-16115.firebaseapp.com", databaseURL: "https://clicker-16115-default-rtdb.firebaseio.com", projectId: "clicker-16115", storageBucket: "clicker-16115.firebasestorage.app", messagingSenderId: "294380892371", appId: "1:294380892371:web:cbeb0970cb2ff312376426", measurementId: "G-2143SHDR89" };
+      const firebaseConfig = { apiKey: "AIzaSyASVz3W__rbF2Sq8QzLvax0Vt3HahUJQMY", authDomain: "clicker-helloworld.firebaseapp.com", databaseURL: "https://clicker-helloworld-default-rtdb.firebaseio.com", projectId: "clicker-helloworld", storageBucket: "clicker-helloworld.firebasestorage.app", messagingSenderId: "1031868712105", appId: "1:1031868712105:web:d00e5c65213b48e1f315b8", measurementId: "G-3E8RK0M1WJ" };
       const app = initializeApp(firebaseConfig); try { getAnalytics(app); } catch {}
       const auth = getAuth(app); const db = getFirestore(app); const rtdb = getDatabase(app);
 
       // --- Anti-tamper and integrity check ---
       let __tamperChecked = false;
       let __tamperDetected = false;
-             const INTEGRITY_SCRIPT_HASH = 4251882609; // auto-generated integrity hash
+             const INTEGRITY_SCRIPT_HASH = 3931022808; // auto-generated integrity hash
       function djb2(str){ let h = 5381 >>> 0; for (let i = 0; i < str.length; i++) { h = (((h << 5) + h) ^ str.charCodeAt(i)) >>> 0; } return h >>> 0; }
       function getModuleScriptText(){ try { const s = document.getElementById('app-module'); if (!s) return ''; return s.textContent || ''; } catch { return ''; } }
       function computeCurrentScriptHash(){ const txt = getModuleScriptText().replace(/INTEGRITY_SCRIPT_HASH\s*=\s*\d+/, '').replace(/\n|\r/g,''); return djb2(txt); }
