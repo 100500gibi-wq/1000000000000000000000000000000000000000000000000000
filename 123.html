@@ -307,7 +307,7 @@
       // --- Anti-tamper and integrity check ---
       let __tamperChecked = false;
       let __tamperDetected = false;
-             const INTEGRITY_SCRIPT_HASH = 956905959; // auto-generated integrity hash
+             const INTEGRITY_SCRIPT_HASH = 3135022554; // auto-generated integrity hash
       function djb2(str){ let h = 5381 >>> 0; for (let i = 0; i < str.length; i++) { h = (((h << 5) + h) ^ str.charCodeAt(i)) >>> 0; } return h >>> 0; }
       function getModuleScriptText(){ try { const s = document.getElementById('app-module'); if (!s) return ''; return s.textContent || ''; } catch { return ''; } }
       function computeCurrentScriptHash(){ const txt = getModuleScriptText().replace(/INTEGRITY_SCRIPT_HASH\s*=\s*\d+/, '').replace(/\n|\r/g,''); return djb2(txt); }
@@ -629,6 +629,7 @@
       function buildQuests(){ dom.questsList.innerHTML=''; for (const q of DAILY_QUESTS){ const li=document.createElement('li'); li.className='item'; const done = q.test({ daily: gameState.daily }); li.innerHTML = `<div class="meta"><span class="name">${q.name}</span><span class="desc">Награда: ${format(q.reward)}</span></div><div class="cta"><span class="badge ${done?'':''}">${done?'Готово':'В процессе'}</span></div>`; dom.questsList.appendChild(li);} dom.streak.textContent = String(gameState.daily.streak||0); }
       function claimDaily(){ if (gameState.daily.claimed) { alert('Награда уже получена'); return; } gameState.coins += 500 + gameState.daily.streak*50; gameState.daily.claimed = true; renderStats(); persist(); }
       function buildAchievements(){ dom.achievementsList.innerHTML=''; for (const a of ACHIEVEMENTS){ const unlocked = !!gameState.achievements[a.id]; const li=document.createElement('li'); li.className='item'; li.innerHTML = `<div class="meta"><span class="name">${a.name}</span><span class="desc">${a.desc}</span></div><div class="cta"><span class="badge" style="background:${unlocked?'rgba(16,185,129,.2)':'rgba(255,255,255,.08)'}">${unlocked?'Открыто':'Скрыто'}</span></div>`; dom.achievementsList.appendChild(li);} }
+      function checkAchievements(){ let changed=false; for (const a of ACHIEVEMENTS){ if (!gameState.achievements[a.id] && a.test(gameState)){ gameState.achievements[a.id] = true; gameState.coins += a.reward; changed = true; } } if (changed){ renderStats(); persist(); } }
 
       function applyLang(){ const L = TEXT[gameState.settings.lang] || TEXT.ru; const tabs = [L.game,L.shop,L.top,L.quests,L.achievements,L.settings,'Админ']; const tabEls = document.querySelectorAll('.tabs .tab'); tabEls.forEach((b,i)=>{ if (i < tabs.length) b.textContent = tabs[i]; }); const lbls = document.querySelectorAll('#view-game .stat .label'); lbls[0].textContent=L.coins; lbls[1].textContent=L.perClick; lbls[2].textContent=L.cps; lbls[3].textContent=L.prestige; lbls[4].textContent=L.clicks; dom.boostBtn.textContent=L.boost; dom.prestigeBtn.textContent=L.prestigeBtn; dom.saveBtn.textContent=L.save; dom.dailyClaim.textContent=L.daily; }
 
