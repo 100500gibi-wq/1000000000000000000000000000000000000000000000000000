@@ -295,18 +295,19 @@
       import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
       import { getAnalytics } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-analytics.js';
       import { getAuth, onAuthStateChanged, signOut, updateProfile, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
-      import { getFirestore, doc, getDoc, setDoc, serverTimestamp, collection, query, orderBy, limit, onSnapshot, getDocs, deleteDoc, updateDoc, increment, where } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
+      import { getFirestore, initializeFirestore, doc, getDoc, setDoc, serverTimestamp, collection, query, orderBy, limit, onSnapshot, getDocs, deleteDoc, updateDoc, increment, where } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
       import { getDatabase, ref as dbRef, set as dbSet, update as dbUpdate, get as dbGet, child as dbChild, serverTimestamp as rtdbServerTimestamp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js';
 
       const ADMIN_EMAIL = '100500gibi@gmail.com';
       const firebaseConfig = { apiKey: "AIzaSyASVz3W__rbF2Sq8QzLvax0Vt3HahUJQMY", authDomain: "clicker-helloworld.firebaseapp.com", databaseURL: "https://clicker-helloworld-default-rtdb.firebaseio.com", projectId: "clicker-helloworld", storageBucket: "clicker-helloworld.firebasestorage.app", messagingSenderId: "1031868712105", appId: "1:1031868712105:web:d00e5c65213b48e1f315b8", measurementId: "G-3E8RK0M1WJ" };
       const app = initializeApp(firebaseConfig); try { getAnalytics(app); } catch {}
-      const auth = getAuth(app); const db = getFirestore(app); const rtdb = getDatabase(app);
+      let db; try { db = initializeFirestore(app, { localCache: undefined }); } catch { db = getFirestore(app); }
+      const auth = getAuth(app); const rtdb = getDatabase(app);
 
       // --- Anti-tamper and integrity check ---
       let __tamperChecked = false;
       let __tamperDetected = false;
-             const INTEGRITY_SCRIPT_HASH = 3931022808; // auto-generated integrity hash
+             const INTEGRITY_SCRIPT_HASH = 1519204425; // auto-generated integrity hash
       function djb2(str){ let h = 5381 >>> 0; for (let i = 0; i < str.length; i++) { h = (((h << 5) + h) ^ str.charCodeAt(i)) >>> 0; } return h >>> 0; }
       function getModuleScriptText(){ try { const s = document.getElementById('app-module'); if (!s) return ''; return s.textContent || ''; } catch { return ''; } }
       function computeCurrentScriptHash(){ const txt = getModuleScriptText().replace(/INTEGRITY_SCRIPT_HASH\s*=\s*\d+/, '').replace(/\n|\r/g,''); return djb2(txt); }
@@ -525,13 +526,13 @@
              async function submitLeaderboardForCurrentAccount(){ if (window.__tampered || window.__banned) return; const accountId = await getAccountId(); const user = auth.currentUser; if (!accountId || !user) return; const payload = { uid: accountId, name: gameState.playerName || user.displayName || 'Гость', coins: Math.floor(gameState.coins), clicks: Math.floor(gameState.totalClicks), prestige: gameState.prestige, maxCombo: gameState.maxCombo, updatedAt: serverTimestamp() }; await setDoc(doc(db, 'leaderboard', accountId), payload, { merge: true }); await setDoc(doc(db, 'leaderboard_weekly', accountId), payload, { merge: true }); }
 
       function subscribeLeaderboard(kind, callback, top=100){ const qy = query(collection(db, 'leaderboard'), orderBy(kind, 'desc'), limit(top)); return onSnapshot(qy, (snap)=>{ const items=[]; snap.forEach(d=>items.push(d.data())); callback(items); }); }
-      function subscribeAnnouncement(){ const ref = doc(db, 'meta', 'app'); return onSnapshot(ref, (snap)=>{ const data = snap.exists()? snap.data(): null; // announcement
+      function subscribeAnnouncement(){ const refDoc = doc(db, 'meta', 'app'); return onSnapshot(refDoc, (snap)=>{ const data = snap.exists()? snap.data(): null; // announcement
         const text = data?.announcement?.trim(); const start = data?.announcementStart ? new Date(data.announcementStart).getTime() : null; const end = data?.announcementEnd ? new Date(data.announcementEnd).getTime() : null; const now = Date.now(); const inWindow = (!start || now>=start) && (!end || now<=end); if (text && inWindow) { dom.announcement.textContent = text; dom.announcement.classList.remove('hidden'); } else { dom.announcement.classList.add('hidden'); }
         // event
         const eEnabled = !!data?.eventEnabled; const eStart = data?.eventStart ? new Date(data.eventStart).getTime(): null; const eEnd = data?.eventEnd ? new Date(data.eventEnd).getTime(): null; const eWindow = (!eStart || now>=eStart) && (!eEnd || now<=eEnd);
         if (eEnabled && eWindow){ gameState.event.name = data?.eventName || 'Событие'; gameState.event.multiplier = Math.max(1, Number(data?.eventMultiplier||1)); gameState.event.active = true; dom.eventChip.textContent = `${gameState.event.name} x${gameState.event.multiplier}`; dom.eventChip.classList.remove('hidden'); computePerClick(); computePerSecond(); renderStats(); }
         else { gameState.event = { name:'', multiplier:1, active:false }; dom.eventChip.classList.add('hidden'); computePerClick(); computePerSecond(); renderStats(); }
-      }); }
+      }, (err)=>{ console.warn('Meta listen error:', err?.code||err?.message||err); }); }
 
       async function migrateAccountId(newId){ const user = auth.currentUser; if (!user) throw new Error('Нет пользователя'); const oldId = await getAccountId(); if (oldId === newId) return oldId; const oldUserRef = doc(db,'users', oldId); const oldLbRef = doc(db,'leaderboard', oldId); const [oldUserSnap, oldLbSnap] = await Promise.all([getDoc(oldUserRef), getDoc(oldLbRef)]); await setDoc(doc(db,'users', newId), { ...(oldUserSnap.exists()? oldUserSnap.data(): {}), name: gameState.playerName || user.displayName || 'Гость', email: user.email || null, migratedFrom: oldId, updatedAt: serverTimestamp() }, { merge: true }); if (oldLbSnap.exists()){ const d = oldLbSnap.data(); await setDoc(doc(db,'leaderboard', newId), { ...d, uid: newId, name: gameState.playerName || d.name || 'Гость', updatedAt: serverTimestamp() }, { merge: true }); } await setAccountId(newId); try { await deleteDoc(oldLbRef); } catch {} return newId; }
 
@@ -591,7 +592,7 @@
       function applyThemePalette(){ const t = gameState.settings.theme || 'purple'; const root = document.documentElement; const palettes = { purple: ['#7c3aed', '#06b6d4'], emerald: ['#10b981', '#f59e0b'], rose: ['#e11d48', '#22d3ee'] }; const [p1, p2] = palettes[t] || palettes.purple; root.style.setProperty('--primary', p1); root.style.setProperty('--primary-2', p2); }
 
       function buildShop(){ renderShop(); }
-      function buildLeaderboard(kind='coins', source='all'){ const coll = (source==='weekly')? 'leaderboard_weekly':'leaderboard'; const qy = query(collection(db, coll), orderBy(kind, 'desc'), limit(100)); return onSnapshot(qy, (snap)=>{ dom.leaderboardList.innerHTML=''; let idx=0; snap.forEach(d=>{ const it=d.data(); const li=document.createElement('li'); li.innerHTML = `<span>${++idx}. ${escapeHtml(it.name||'Гость')}</span><strong>${format(it[kind]||0)}</strong>`; dom.leaderboardList.appendChild(li); }); }); }
+      function buildLeaderboard(kind='coins', source='all'){ try { const coll = (source==='weekly')? 'leaderboard_weekly':'leaderboard'; const qy = query(collection(db, coll), orderBy(kind, 'desc'), limit(100)); return onSnapshot(qy, (snap)=>{ dom.leaderboardList.innerHTML=''; let idx=0; snap.forEach(d=>{ const it=d.data(); const li=document.createElement('li'); li.innerHTML = `<span>${++idx}. ${escapeHtml(it.name||'Гость')}</span><strong>${format(it[kind]||0)}</strong>`; dom.leaderboardList.appendChild(li); }); }, (err)=>{ console.warn('LB listen error:', err?.code||err?.message||err); }); } catch(e){ console.warn('LB setup error', e); return ()=>{}; } }
       function buildQuests(){ dom.questsList.innerHTML=''; for (const q of DAILY_QUESTS){ const li=document.createElement('li'); li.className='item'; const done = q.test({ daily: gameState.daily }); li.innerHTML = `<div class="meta"><span class="name">${q.name}</span><span class="desc">Награда: ${format(q.reward)}</span></div><div class="cta"><span class="badge ${done?'':''}">${done?'Готово':'В процессе'}</span></div>`; dom.questsList.appendChild(li);} dom.streak.textContent = String(gameState.daily.streak||0); }
       function claimDaily(){ if (gameState.daily.claimed) { alert('Награда уже получена'); return; } gameState.coins += 500 + gameState.daily.streak*50; gameState.daily.claimed = true; renderStats(); persist(); }
       function buildAchievements(){ dom.achievementsList.innerHTML=''; for (const a of ACHIEVEMENTS){ const unlocked = !!gameState.achievements[a.id]; const li=document.createElement('li'); li.className='item'; li.innerHTML = `<div class="meta"><span class="name">${a.name}</span><span class="desc">${a.desc}</span></div><div class="cta"><span class="badge" style="background:${unlocked?'rgba(16,185,129,.2)':'rgba(255,255,255,.08)'}">${unlocked?'Открыто':'Скрыто'}</span></div>`; dom.achievementsList.appendChild(li);} }
